@@ -1,6 +1,7 @@
 from scipy import *
 from scipy import optimize, linalg, integrate, interpolate
 import pylab as pl
+import time
 
 def findperiod(k, beta, Dx, Dy, ex, ey, m0):
     kx = k
@@ -95,25 +96,113 @@ def form(building):
 	
 	return building
 		
-def plotmode(building,mode):
-	th = arange(0., 2*pi, pi/20.)
+def plotmode(building,mode,anim=0,Nframe = 100,fps = 30.):
 	z = building['h'].cumsum()
 	esp = building['esp']
 	idx = building['modeorder']
 	
+	factor = 0.1*z.max()/abs(building['phi'][idx[mode-1],:]).max()
+	
+	pl.ion()
 	pl.figure()
-	pl.plot(0*z,z,'--k')
-	for i in range(building['nfloors']):
-		rx = esp[i]*cos(th)
-		ry = esp[i]*sin(th)
-		factor = 0.1*z.max()/abs(building['phi'][idx[mode-1],:]).max()
-		pl.plot(rx + factor*building['phi'][idx[mode-1],i], ry + z[i],'b')
+	iter = 0
+	fac = factor*cos(2*pi*iter/(2*fps))
+	han = plotdef(building,squeeze(array(fac*building['phi'][idx[mode-1],:])))
 	pl.xlabel('Disp [m]')
 	pl.ylabel('z [m]')
 	pl.title('Mode Num. {0:.0f}, T = {1:.2f} [s]'.format(mode,building['T'][idx[mode-1]]))
 	pl.axis('equal')
-	pl.show()
 	
+	while iter < Nframe:
+		if anim == 0:
+			break
+		time.sleep(1./fps)
+		fac = factor*cos(2*pi*iter/(2*fps))
+		plotdef(building, squeeze(array(fac*building['phi'][idx[mode-1],:])), update=1, handles=han)
+		iter += 1
+			
+
+def animdef(building,u,Nframe = 1,factor=1,dt=1./30,fps = 30.):
+	z = building['h'].cumsum()
+	esp = building['esp']
+	idx = building['modeorder']
+	
+	pl.ion()
+	pl.figure()
+	han = plotdef(building,squeeze(array(factor*u[0,:])))
+	pl.xlabel('Disp [m]')
+	pl.ylabel('z [m]')
+	#pl.title('t = {0:.2f} [s]'.format(t[i]))
+	pl.axis('equal')
+	iter = 1
+	fskip = ceil(dt*fps)
+	if fskip < 1:
+		fskip = 1
+	if dt*fps < 1.:
+		fskip = 1.
+		fps = 1./dt
+		
+	
+	while iter < min(Nframe*fskip,Nframe):
+		time.sleep(1./fps)
+		#ti = time.time()
+		pl.title('t = {0:05.2f} s'.format(dt*iter))
+		plotdef(building, squeeze(array(factor*u[iter,:])), update=1, handles=han)
+		iter += fskip
+		#tf = time.time()
+		#if (tf-ti) > 1/fps:
+			#fskip = floor((tf-ti)*fps)
+
+
+def plotdef(building,u,update=0,handles={}):
+	Npts = 30
+	esp = building['esp']
+	dx = building['dx']
+	z = building['h'].cumsum()
+	
+	#Interpolation functions
+	s = arange(0.,1.,1./Npts)
+	N1 = 1.-3.*s**2.+2*s**3.
+	N2 = 3.*s**2.-2.*s**3.
+	flr = {}
+	col = {}
+	
+	if update != 0:
+		flr = handles['flrs']
+		col = handles['cols']
+	xx = array([-dx/2, dx/2 , dx/2, -dx/2])
+	for i in range(building['nfloors']):		
+		yy = array([-esp[i]/2, -esp[i]/2 , esp[i]/2, esp[i]/2])
+		if update == 0:
+			flr[i], = pl.fill(xx + u[i], z[i] + yy, facecolor = '#ADADAD', alpha=0.7, edgecolor='k')
+		else:
+			ux = xx + u[i]
+			uy = z[i] + yy
+			xy = flr[i].get_xy()
+			xy[:,0] = ux[[0,1,2,3,0]]
+			flr[i].set_xy(xy)
+			
+		if i == 0:
+			z1 = 0
+			z2 = z[i]
+			u1 = 0
+			u2 = u[i]
+		else:
+			z1 = z[i-1]
+			z2 = z[i]
+			u1 = u[i-1]
+			u2 = u[i]
+		if update == 0:
+			col[2*i-1], = pl.plot(-dx/2 + N1*u1 + N2*u2, z1 + (z2-z1)*(s),'b')
+			col[2*i],   = pl.plot(dx/2 + N1*u1 + N2*u2, z1 + (z2-z1)*(s),'b')
+		else:
+			col[2*i-1].set_xdata(-dx/2 + N1*u1 + N2*u2)
+			col[2*i].set_xdata(dx/2 + N1*u1 + N2*u2)
+	pl.draw()
+	handles = dict(flrs=flr,cols=col)
+	return handles
+		
+
 def response(building, input):
 	#State-space representation
 
