@@ -41,6 +41,8 @@ class App(Frame):
         for i, item in enumerate(self.buildings):
             for key,value in item.iteritems():
                 building[key][i] = float(value)
+        
+        building['name'] = self.buildingName
 
         building_sim(building)
         #tkMessageBox.showinfo("Procesando", "Estamos procesando por usted...")
