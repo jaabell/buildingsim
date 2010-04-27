@@ -353,7 +353,7 @@ def freqresp(building,type=0,f0=0.,f1=10.,nfreq=200.,plottype = 'plot', plotthes
 	
 def compare_buildings(build1,build2,type=0,f0=0.,f1=20.,nfreq=200.,plottype = 'plot'):
 	Nf1 = build1['nfloors']
-	Nf2 = build1['nfloors']
+	Nf2 = build2['nfloors']
 	print ''
 	print '----------------------------------------'
 	print 'Building Comparison'
