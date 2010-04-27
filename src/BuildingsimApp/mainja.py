@@ -64,7 +64,7 @@ building2 = form(building2,geom_eff=1)
 
 
 
-han = compare_buildings(building1,building2,plottype='semilogy')
+han = compare_buildings(building1,building2,plottype='semilogy',type=2)
 pl.ion()
 pl.show()
 #sol = response(building,input)
