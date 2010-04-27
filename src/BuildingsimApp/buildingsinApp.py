@@ -153,10 +153,7 @@ class App(Frame):
         Frame.__init__(self, master)
         self.master.title("Calculadora de Comportamiento de Edificios")        
         self.grid(padx=15, pady=15,sticky=N+S+E+W)
-        self.create_menu()
-
-        gif1 = PhotoImage(file="ing.gif")
-        Label(self, image=gif1).grid(row=0, column=0)
+        self.create_menu()        
 
 
 #main
