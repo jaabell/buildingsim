@@ -1,8 +1,8 @@
-# To change this template, choose Tools | Templates
-# and open the template in the editor.
 from Tkinter import *
-import tkMessageBox
 import tkSimpleDialog
+from tkFileDialog import askopenfilename
+from tkFileDialog import asksaveasfilename
+import elementtree.ElementTree as ET
 from buildingtool import *
 
 class App(Frame):
@@ -27,8 +27,8 @@ class App(Frame):
         #tkMessageBox.showinfo("Procesando", "Estamos procesando por usted...")
 
     def add_floor(self):
-        b = {"h":self.hEntry.get(), "E":self.eEntry.get(), "I":self.iEntry.get(), "gamma":self.gammaEntry.get(), "esp":self.espEntry.get()}
-        self.buildings.append(b)
+        floor = {"h":self.hEntry.get(), "E":self.eEntry.get(), "I":self.iEntry.get(), "gamma":self.gammaEntry.get(), "esp":self.espEntry.get()}
+        self.buildings.append(floor)
         self.update_floor_listbox()
 
     def edit_floor(self):
@@ -54,7 +54,7 @@ class App(Frame):
 
     def delete_floor(self):
         items = map(int, self.floorListBox.curselection())
-        for floor in items:            
+        for floor in items:
             self.buildings.remove(self.buildings[floor])
         self.update_floor_listbox()
 
@@ -65,12 +65,10 @@ class App(Frame):
             for key,value in item.iteritems():
                 s = s + "[" + key + "=" + value + "]"
             self.floorListBox.insert(END, s)
-        
-    def prepare_new_building(self):
-        self.buildingName = tkSimpleDialog.askstring("Ingreso", "Ingresa el nombre del Edificio:", parent=self)
+
+    def prepare_to_building(self):
         if self.buildingName:
             self.buildings = []
-
             Label(self, text="Edificio ", font=("Verdana", 12)).grid(row=0, column=0, padx=5, pady=5, sticky=E)
             self.nameLabel = Label(self, text=self.buildingName)
             self.nameLabel["fg"] = "red"
@@ -94,7 +92,6 @@ class App(Frame):
 
             # Pisos
             Label(self, text="Pisos", font=("Verdana", 12)).grid(row=4, column=0, columnspan=3, padx=5, pady=5)
-
             Label(self, text="Altura [m]", font=("Verdana", 10)).grid(row=5, column=0, padx=5, sticky=E)
             self.hEntry = Entry(self)
             self.hEntry.grid(row=5, column=1, padx=5)
@@ -130,18 +127,50 @@ class App(Frame):
             self.deleteFloorButton = Button(self, text="Eliminar", command=self.delete_floor, width=10)
             self.deleteFloorButton.grid(row=9, column=4, padx=5)
 
-    def load_building(self):
-        tkMessageBox.showinfo("Abrir", "Disponible en proxima version...")
+    def prepare_new_building(self):
+        self.buildingName = tkSimpleDialog.askstring("Ingreso", "Ingresa el nombre del Edificio:", parent=self)
+        self.prepare_to_building()
 
+    def load_building(self):
+        filename = askopenfilename(title="Elige un archivo para abrir", initialdir=".", filetypes=[("Buildingsim File","*.bsim")])
+        tree = ET.parse(filename)
+        root = tree.getroot()
+        self.buildingName = root.get("name")        
+        self.prepare_to_building()
+        
+        self.dxEntry.insert(0, root.get("dx"))
+        self.dyEntry.insert(0, root.get("dy"))
+        
+        for floorNode in tree.getiterator("floor"):
+            floor = {"h":floorNode.get("h"), "E":floorNode.get("E"), "I":floorNode.get("I"), "gamma":floorNode.get("gamma"), "esp":floorNode.get("esp")}
+            self.buildings.append(floor)
+            self.update_floor_listbox()
+            
     def save_building(self):
-        tkMessageBox.showinfo("Guardar", "Disponible en proxima version...")
+        filename = asksaveasfilename(parent=self.master, title="Ingresa o selecciona el archivo donde guardar", filetypes=[("Buildingsim File","*.bsim")])
+
+        buildingNode = ET.Element("building")
+        buildingNode.set("name", self.buildingName)
+        buildingNode.set("dx", self.dxEntry.get())
+        buildingNode.set("dy", self.dyEntry.get())
+
+        floorsListNode = ET.SubElement(buildingNode, "floors")
+
+        #Save floors
+        for i, item in enumerate(self.buildings):
+            floorNode = ET.SubElement(floorsListNode, "floor")
+            for key,value in item.iteritems():
+                floorNode.set(key, value)
+
+        tree = ET.ElementTree(buildingNode)
+        tree.write(filename)
 
     def create_menu(self):
         self.menu = Menu(self)
         self.master.config(menu=self.menu)
 
         self.buildingMenu = Menu(self.menu)
-        self.buildingMenu.add_command(label="Nuevo", command=self.prepare_new_building)        
+        self.buildingMenu.add_command(label="Nuevo", command=self.prepare_new_building)
         self.buildingMenu.add_command(label="Abrir", command=self.load_building)
         self.buildingMenu.add_separator()
         self.buildingMenu.add_command(label="Guardar", command=self.save_building)
@@ -151,10 +180,9 @@ class App(Frame):
 
     def __init__(self, master):
         Frame.__init__(self, master)
-        self.master.title("Calculadora de Comportamiento de Edificios")        
+        self.master.title("Calculadora de Comportamiento de Edificios")
         self.grid(padx=15, pady=15,sticky=N+S+E+W)
-        self.create_menu()        
-
+        self.create_menu()
 
 #main
 root = Tk()
