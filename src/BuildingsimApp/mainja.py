@@ -24,6 +24,7 @@ building['I'] = array([I0, I0, I0, I0])	* (100**2)	# Momento inercia columnas [m
 building['gamma'] = array([2.5, 2.5, 2.5, 2.5]) 	# Peso unitario losas [tonf/m**3]
 building['esp'] = array([0.15, 0.15, 0.10, 0.10])	# espesor losas [m]
 building['cadd'] = array([])
+
 g = 9.806
 
 #Definicion input
@@ -51,17 +52,31 @@ input['ug'] = a0*sign(sin(2.*pi*f*t))*(t<tend)      			#Rect
 #cc = cos(2.*pi*(f*t + K*t**2/2))
 #input['ug'] = d0*(-sc*(2*pi*f + 2*pi*K*t)**2 + cc*2*pi*K)*(t<tend) 			#test
 
+building1 = building.copy()
+building2 = building.copy()
+
+building1['name'] = 'Sin Efectos 2do. Orden'
+building2['name'] = 'Con Efectos 2do. Orden'
+building2['gamma'] = building2['gamma']*10
 
 #Initialize building and calculate response
-building = form(building)
-sol = response(building,input)
+building1 = form(building1,geom_eff=0)
+building2 = form(building2,geom_eff=1)
 
-animdef(building,sol['dis'],Nframe=nt,factor=50,dt=dt,fps=2/dt)
+
+
+han = compare_buildings(building1,building2,plottype='semilogy')
+pl.ion()
+pl.show()
+#sol = response(building,input)
+
+
+#animdef(building,sol['dis'],Nframe=nt,factor=50,dt=dt,fps=2/dt)
 #plotmode(building,1,anim=1)
 
 #for i in arange(4):
-	#plotmode(building,i)
-
+	#plotmode(building,i+1)
+#pl.show()
 #plotdef(building,array([1, 2, 3, 4]))
 #pl.show()
 

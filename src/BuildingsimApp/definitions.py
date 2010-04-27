@@ -36,10 +36,7 @@ def blkdiag(*args):
         b = zeros((msize(A,0),msize(args[i+1],1)))
         A = vstack([hstack([A,b]),hstack([b.transpose(),args[i+1]])])
     return A
-
-#def vermodo
-
-def form(building):
+def form(building,geom_eff=0):
 	
 	g = 9.806
 	
@@ -58,21 +55,34 @@ def form(building):
 	m0 = dx*dy*esp*gamma/g     	# Main system mass tonf*s^2/m
 
 	k = zeros((nfloors,nfloors))
+	kg = zeros((nfloors,nfloors))
 	m = zeros((nfloors,nfloors))
+	
+	if geom_eff == 1:
+		P = -m0[::-1].cumsum()[::-1]*g
 
 	for i in range(nfloors):
 		if i == (nfloors - 1):
 			k[i,i] = kcol[i]
+		
 		else:
 			k[i,i] = kcol[i] + kcol[i+1]
 			k[i,i+1] = -kcol[i+1]
 			k[i+1,i] = -kcol[i+1]
-			
+		
+		if geom_eff == 1:
+			if i == (nfloors - 1):
+				kg[i,i] = P[i]/h[i]
+			else:
+				kg[i,i] = P[i]/h[i] + P[i+1]/h[i+1]
+				kg[i,i+1] = -P[i+1]/h[i+1]
+				kg[i+1,i] = -P[i+1]/h[i+1]
+				
 		m[i,i] = m0[i]
 	
 	
 	# Find modes
-	D,PHI = linalg.eig(k,m);
+	D,PHI = linalg.eig(k+kg,m);
 	w = sqrt(real(D));
 	T = 2.*pi/w
 	idx = argsort(T) #ascending period sort
@@ -90,9 +100,12 @@ def form(building):
 	building['phi'] = PHI
 	building['modeorder'] = idx
 	building['k'] = k	
+	building['kg'] = kg
 	building['m'] = m
 	building['nfloors'] = nfloors
 	building['rsis'] = ones((nfloors,1)) #Seismic input matrix
+	if geom_eff==1:
+		building['P'] = P
 	
 	return building
 		
@@ -288,7 +301,7 @@ def envresp(building,input,sol,type='acc'):
 	
 	pl.show()
 
-def freqresp(building,type,f0,f1,nfreq,plottype = 'plot'):
+def freqresp(building,type=0,f0=0.,f1=10.,nfreq=200.,plottype = 'plot', plotthese = -1, axhan=-1):
 	
 	M = matrix(building['m'])
 	C = building['c']
@@ -307,9 +320,16 @@ def freqresp(building,type,f0,f1,nfreq,plottype = 'plot'):
 	#freq['U'] = U
 	#return freq
 	
-	pl.figure()
-	ax = pl.subplot(1,1,1)
-	for i in arange(building['nfloors']):
+	if plotthese == -1:
+		plotthese = arange(building['nfloors'])
+	
+	if axhan==-1:
+		pl.figure()
+		ax = pl.subplot(1,1,1)
+	else:
+		ax = axhan
+	
+	for i in plotthese:
 		
 		if plottype.lower() == 'loglog':
 			ax.loglog(squeeze(omegas)/(2*pi), squeeze(U[i,:]), label='Piso {0:.0f}'.format(i))
@@ -330,4 +350,66 @@ def freqresp(building,type,f0,f1,nfreq,plottype = 'plot'):
 		pl.ylabel('Velocidades')
 	elif type == 2:
 		pl.ylabel('Aceleraciones')
-	pl.show()
+	
+def compare_buildings(build1,build2,type=0,f0=0.,f1=20.,nfreq=200.,plottype = 'plot'):
+	Nf1 = build1['nfloors']
+	Nf2 = build1['nfloors']
+	print ''
+	print '----------------------------------------'
+	print 'Building Comparison'
+	print '----------------------------------------'
+	print 'Building 1 Name: '+build1['name']
+	print 'Building 2 Name: '+build2['name']
+	print '----------------------------------------'
+	print '           Building 1     Building 2    '
+	print 'Nfloors ={0:15.0f}{1:15.0f}'.format(Nf1,Nf2)
+	print 'Mass    ={0:15.5f}{1:15.5f}'.format(build1['m'].sum(),build2['m'].sum())
+	print 'Weight  ={0:15.5f}{1:15.5f}'.format(build1['m'].sum()*build1['g'],build2['m'].sum()*build1['g'])
+	print ''
+	print 'Periods [s]'
+
+	for i in range(max(Nf1,Nf2)):
+		if i > Nf1:
+			print 'Mode{0:3.0f} =               {1:15.7f}'.format(i+1,build2['T'][build2['modeorder'][i]])
+		elif i > Nf2:
+			print 'Mode{0:3.0f} ={1:15.7f}               '.format(i+1,build1['T'][build1['modeorder'][i]])
+		else:
+			print 'Mode{0:3.0f} ={1:15.7f}{2:15.7f}'.format(i+1,build1['T'][build1['modeorder'][i]],build2['T'][build2['modeorder'][i]])
+			
+	print ''
+	print 'Frequencies [Hz]'
+
+	for i in range(max(Nf1,Nf2)):
+		if i > Nf1:
+			print 'Mode{0:3.0f} =               {1:15.7f}'.format(i+1,1/build2['T'][build2['modeorder'][i]])
+		elif i > Nf2:
+			print 'Mode{0:3.0f} ={1:15.7f}               '.format(i+1,1/build1['T'][build1['modeorder'][i]])
+		else:
+			print 'Mode{0:3.0f} ={1:15.7f}{2:15.7f}'.format(i+1,1/build1['T'][build1['modeorder'][i]],1/build2['T'][build2['modeorder'][i]])
+	
+	fig = pl.figure()	
+	ax1 = pl.subplot(1,2,1)
+	freqresp(build1, axhan = ax1, type = type, f0 = f0, f1 = f1, nfreq = nfreq, plottype = plottype)
+	pl.title(build1['name'])
+	
+	ax2 = pl.subplot(1,2,2)
+	freqresp(build2, axhan = ax2, type = type, f0 = f0, f1 = f1, nfreq = nfreq, plottype = plottype)
+	pl.ylabel('')
+	pl.title(build2['name'])
+	
+	fmax = max(ax1.axis()[1],ax2.axis()[1])
+	fmin = min(ax1.axis()[0],ax2.axis()[0])
+	ymax = max(ax1.axis()[3],ax2.axis()[3])
+	ymin = min(ax1.axis()[2],ax2.axis()[2])
+	
+	ax1.axis(array([fmin,fmax,ymin,ymax]))
+	ax2.axis(array([fmin,fmax,ymin,ymax]))
+	
+	
+	handles = {}
+	handles['fig'] = fig
+	handles['ax1'] = ax1
+	handles['ax2'] = ax2
+	
+	return handles
+
