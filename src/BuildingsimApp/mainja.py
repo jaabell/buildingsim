@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-
 from scipy import *
 from scipy import optimize, linalg, integrate, interpolate
 import time

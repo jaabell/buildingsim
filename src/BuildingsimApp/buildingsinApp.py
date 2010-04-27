@@ -1,8 +1,27 @@
+#!/usr/bin/python
+
 from Tkinter import *
 import tkSimpleDialog
 from tkFileDialog import askopenfilename
 from tkFileDialog import asksaveasfilename
-import elementtree.ElementTree as ET
+#import elementtree.ElementTree as ET
+import sys
+python_version = sys.version_info[:2]
+print >> sys.stderr, "Python version:", sys.version_info
+if python_version >= (2, 5):
+	import xml.etree.cElementTree as ET
+else:
+	try:
+		import cElementTree as ET
+	except ImportError:
+		try:
+			import ElementTree as ET
+		except ImportError:
+			msg = "\nYou need the [c]ElementTree package\n" \
+			"from http://effbot.org/downloads/\n\n";
+			sys.stderr.write(msg)
+			raise
+			print >> sys.stderr, "ET imported from", ET.__file_
 from buildingtool import *
 
 class App(Frame):
