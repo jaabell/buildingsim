@@ -277,10 +277,10 @@ def plotdef(building,u,update=0,handles={},ax = -1):
     N2 = 3.*s**2.-2.*s**3.
     flr = {}
     col = {}
-    if ax != -1:
-        pl.axes(ax)
-    else:
-        ax = subplot(111)
+    #if ax != -1:
+        #pl.axes(ax)
+    #else:
+        #ax = subplot(111)
         
     if update != 0:
         flr = handles['flrs']
@@ -290,7 +290,7 @@ def plotdef(building,u,update=0,handles={},ax = -1):
         yy = array([-esp[i]/2, -esp[i]/2 , esp[i]/2, esp[i]/2])
         if update == 0:
             flr[i], = pl.fill(xx + u[i], z[i] + yy, facecolor = 
-            '#ADADAD', alpha=0.7, edgecolor='k',axes=ax)
+            '#ADADAD', alpha=0.7, edgecolor='k')
         else:
             ux = xx + u[i]
             uy = z[i] + yy
@@ -309,13 +309,14 @@ def plotdef(building,u,update=0,handles={},ax = -1):
             u1 = u[i-1]
             u2 = u[i]
         if update == 0:
-            col[2*i-1], = pl.plot(-dx/2 + N1*u1 + N2*u2, z1 + (z2-z1)*(s),'b',axes=ax)
-            col[2*i],   = pl.plot(dx/2 + N1*u1 + N2*u2, z1 + (z2-z1)*(s),'b',axes=ax)
+            col[2*i-1], = pl.plot(-dx/2 + N1*u1 + N2*u2, z1 + (z2-z1)*(s),'b')
+            col[2*i],   = pl.plot(dx/2 + N1*u1 + N2*u2, z1 +
+            (z2-z1)*(s),'b')
         else:
             col[2*i-1].set_xdata(-dx/2 + N1*u1 + N2*u2)
             col[2*i].set_xdata(dx/2 + N1*u1 + N2*u2)
-    if ax == -1:
-        pl.draw()
+    #if ax == -1:
+        #pl.draw()#
     handles = dict(flrs=flr,cols=col)
     return handles
 #
@@ -430,34 +431,113 @@ def floorresp(building,input,sol,floor):
 #       type = 'mom': Graficar envolventes de momento de entrepiso (implementar)
 def envresp(building,input,sol,type='acc'):
     #Evaluar alturas
-    z = building['h'].cumsum()
+    h = building['h']
+    z = h.cumsum()
     
     #Inicializar figura
     pl.figure()
     
     #factor = 0.1*z.max()/abs(building['acc']).max()   #Factor de escala
     
-    #Graficar edificio al centro
-    sp1 = pl.subplot(3,1,2)
-    plbuild = plotdef(building,0*z,ax=sp1)
-    pl.title(building['name'])
-    
-    #Calcular respuestas maximas    
-    xmax = sol[type].max(0)
-    xmin = sol[type].min(0)
+    #Calcular respuestas maximas
+    if (type == 'acc') | (type == 'dis') | (type == 'vel'):
+        xmax = sol[type].max(0)
+        xmin = sol[type].min(0)
+
+    #Calcular PGAs del input
+    amax = input['ug'].max()
+    amin = input['ug'].min()
+
+    #Ampliar vector de alturas
+    znew = hstack((0.,z))
+    z = znew
+
+    if type == 'acc':
+        xmax = hstack((amax,array(xmax).squeeze()))
+        xmin = hstack((amin,array(xmin).squeeze()))
+        xl = 'Aceleraciones'
+    elif type == 'dis':
+        xmax = hstack((0.,array(xmax).squeeze()))
+        xmin = hstack((0.,array(xmin).squeeze()))
+        xl = 'Desplazamientos'
+    elif type == 'vel':
+        xmax = hstack((0.,array(xmax).squeeze()))
+        xmin = hstack((0.,array(xmin).squeeze()))
+        xl = 'Velocidades'
+    elif type == 'cor':
+        drift = hstack((matrix(sol['dis'][:,0]).T, diff(sol['dis'],1) ))
+        drmax = drift.max(0)
+        drmin = drift.min(0)
+        xmax = zeros(2*building['nfloors'])
+        xmin = xmax.copy()
+        znew = xmax.copy()
+        for i in range(building['nfloors']):
+            xmax[2*i] = drmax[0,i]/h[i]*100.
+            xmax[2*i+1] = drmax[0,i]/h[i]*100.
+            xmin[2*i] = drmin[0,i]/h[i]*100.
+            xmin[2*i+1] = drmin[0,i]/h[i]*100.
+            znew[2*i] = z[i]
+            znew[2*i+1] = z[i+1]
+            #xmax = hstack((0.,array(xmax).squeeze()))
+            #xmin = hstack((0.,array(xmin).squeeze()))
+        z = znew
+        xl = '% Drift'
+        xl = 'Corte'
+    elif type == 'mom':
+        #xmax = hstack((0.,array(xmax).squeeze()))
+        #xmin = hstack((0.,array(xmin).squeeze()))
+        xl = 'Momento'
+    elif type == 'dri':
+        drift = hstack((matrix(sol['dis'][:,0]).T, diff(sol['dis'],1) ))
+        drmax = drift.max(0)
+        drmin = drift.min(0)
+        xmax = zeros(2*building['nfloors'])
+        xmin = xmax.copy()
+        znew = xmax.copy()
+        for i in range(building['nfloors']):
+            xmax[2*i] = drmax[0,i]/h[i]*100.
+            xmax[2*i+1] = drmax[0,i]/h[i]*100.
+            xmin[2*i] = drmin[0,i]/h[i]*100.
+            xmin[2*i+1] = drmin[0,i]/h[i]*100.
+            znew[2*i] = z[i]
+            znew[2*i+1] = z[i+1]
+            #xmax = hstack((0.,array(xmax).squeeze()))
+            #xmin = hstack((0.,array(xmin).squeeze()))
+        z = znew
+        xl = '% Drift'
+        
     
     #Panel izquierdo
-    sp2 = pl.subplot(1,3,1)
-    pl2 = pl.plot(squeeze(array(xmax)),squeeze(z),'b')
+    sp1 = pl.subplot(1,3,1)
+    pl2 = pl.plot(squeeze(array(xmin)),squeeze(z),'b')
     pl.ylabel('Altura')
-    if type == 'acc':
-        pl.xlabel('Aceleraciones')
+    pl.xlabel(xl)
+
+    #Graficar edificio al centro
+    sp2 = pl.subplot(1,3,2)
+    plbuild = plotdef(building,0*z,ax=sp1)
+    pl.title(building['name'])
         
     #Panel derecho
     sp3 = pl.subplot(1,3,3)
-    pl3 = pl.plot(squeeze(array(xmin)),squeeze(z),'b')
-    if type == 'acc':
-        pl.xlabel('Aceleraciones')
+    pl3 = pl.plot(squeeze(array(xmax)),squeeze(z),'b')
+    pl.xlabel(xl)
+
+    #Ajustar ventanas
+    x1 = sp1.get_position().xmax
+    x2 = sp3.get_position().xmin
+    w = x2 - x1
+        
+    sp2.set_position([x1, sp2.get_position().ymin, w, sp2.get_position().height])
+    sp2.set_yticklabels('')
+    sp2.set_xticklabels('')
+    sp3.set_yticklabels('')
+    sp1.set_ylim(sp2.get_ylim())
+    sp3.set_ylim(sp2.get_ylim())
+    xl = sp1.get_xlim()
+    sp1.set_xlim([xl[0], 0])
+    xl = sp3.get_xlim()
+    sp3.set_xlim([0, xl[1]])
     
     #Devolver handles a las componentes de la figura
     handles = {}

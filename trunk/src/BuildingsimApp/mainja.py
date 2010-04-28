@@ -84,8 +84,9 @@ sol = response(building,input)
 
 ###Plot outputs
 #
-han = envresp(building,input,sol)
+han = envresp(building,input,sol,type='dri')
 pl.ion()
+pl.show()
 #envresp(building,input,sol,'dis')
 
 #freqresp(building,0.,0.,20.,100.,'semilogx')
