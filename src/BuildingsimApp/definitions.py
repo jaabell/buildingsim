@@ -3,6 +3,7 @@ from scipy import optimize, linalg, integrate, interpolate
 import pylab as pl
 import time
 
+#No se usa
 def findperiod(k, beta, Dx, Dy, ex, ey, m0):
     kx = k
     ky = kx/beta
@@ -16,400 +17,613 @@ def findperiod(k, beta, Dx, Dy, ex, ey, m0):
     T = 2*pi/sqrt(real(D))
     return T.max()
 
+
+
+#No se usa
 def objfun(k, beta, Dx, Dy, ex, ey, m0,Tobj):
     return Tobj - findperiod(k, beta, Dx, Dy, ex, ey, m0)
 
+
+
+#No se usa
 def msize(*args):#MATLAB-like size function
     Nargs = len(args)
     sz = array(args[0].shape)
     #return Nargs
     if Nargs == 1:
         return sz
-        
+
     if Nargs > 1:
         return sz[args[1]]
 
+
+
+#De uso interno
+# M = blkdiag(A,B,C,D,...)
+# A,B,C,D,... son arreglos numpy. Esta función devuelve un arreglo M
+# diagonal por bloques, donde los bloques son A,B,C,D,...
+# La cantidad de arreglos no esta limitada. La matriz M creada es de 
+# estructura llena (ceros explicitos).
 def blkdiag(*args):
+    
     Nargs = len(args)
     A = args[0]
     for i in range(Nargs-1):
         b = zeros((msize(A,0),msize(args[i+1],1)))
         A = vstack([hstack([A,b]),hstack([b.transpose(),args[i+1]])])
     return A
+
+
+# FORM: Inicializa la estructura.
+#
+# Sintaxis: building = form(building)
+# building: Estructura de datos (diccionario) que define al edificio.
+#
+# Building debe tener definidos los campos:
+#   'E'     : Arreglo numpy con los modulos de elasticidad de cada piso
+#   'I'     : Arreglo numpy con los momentos de inercia de las 
+#             columnas de cada piso.
+#   'dx'    : Dimension X de la planta del edificio.
+#   'dy'    : Dimension Y de la planta del edificio.
+#   'gamma' : Arreglo numpy con el peso unitario del material de la 
+#             losa de cada piso.
+#   'esp'   : Arreglo numpy con el espesor de la losa en cada piso.
+#   'xsi'   : Amortiguamiento. (0 <= xsi < 1)
+#   'name'  : String con el nombre del edificio
+#
+# Todos los valores son positivos.
+#
+# Form devuelve el mismo building con mas campos definidos (matrices 
+# del sistema, etc.)
 def form(building,geom_eff=0):
-	
-	g = 9.806
-	
-	E = building['E']
-	h = building['h']
-	I = building['I']
-	dx = building['dx']
-	dy = building['dy']
-	gamma = building['gamma']
-	esp = building['esp']
-	xsi = building['xsi']
-	
-	#Calculate column stiffness
-	kcol = 4*12*E*I/(h**3)
-	nfloors = h.shape[0]
-	m0 = dx*dy*esp*gamma/g     	# Main system mass tonf*s^2/m
+    
 
-	k = zeros((nfloors,nfloors))
-	kg = zeros((nfloors,nfloors))
-	m = zeros((nfloors,nfloors))
-	
-	if geom_eff == 1:
-		P = -m0[::-1].cumsum()[::-1]*g
+    g = 9.806
 
-	for i in range(nfloors):
-		if i == (nfloors - 1):
-			k[i,i] = kcol[i]
-		
-		else:
-			k[i,i] = kcol[i] + kcol[i+1]
-			k[i,i+1] = -kcol[i+1]
-			k[i+1,i] = -kcol[i+1]
-		
-		if geom_eff == 1:
-			if i == (nfloors - 1):
-				kg[i,i] = P[i]/h[i]
-			else:
-				kg[i,i] = P[i]/h[i] + P[i+1]/h[i+1]
-				kg[i,i+1] = -P[i+1]/h[i+1]
-				kg[i+1,i] = -P[i+1]/h[i+1]
-				
-		m[i,i] = m0[i]
-	
-	
-	# Find modes
-	D,PHI = linalg.eig(k+kg,m);
-	w = sqrt(real(D));
-	T = 2.*pi/w
-	idx = argsort(T) #ascending period sort
-	idx = idx[::-1]  #reverse order (to descending period)
+    E = building['E']
+    h = building['h']
+    I = building['I']
+    dx = building['dx']
+    dy = building['dy']
+    gamma = building['gamma']
+    esp = building['esp']
+    xsi = building['xsi']
 
-	#Form xsi% modal classical damping matrix
-	Mmodal = mat(dot(PHI.T,dot(m,PHI)))
-	PHI = mat(PHI)
-	M0 = mat(m)
-	C0 = M0*PHI*(linalg.inv(Mmodal))*(2*xsi/100.*diag(w)*Mmodal)*linalg.inv(Mmodal)*PHI.T*M0
+    #Calculate column stiffness
+    kcol = 4*12*E*I/(h**3)
+    nfloors = h.shape[0]
+    m0 = dx*dy*esp*gamma/g      # Main system mass tonf*s^2/m
 
-	#Actualizar estructura
-	building['T'] = T
-	building['c'] = C0
-	building['phi'] = PHI
-	building['modeorder'] = idx
-	building['k'] = k	
-	building['kg'] = kg
-	building['m'] = m
-	building['nfloors'] = nfloors
-	building['rsis'] = ones((nfloors,1)) #Seismic input matrix
-	if geom_eff==1:
-		building['P'] = P
-	
-	return building
-		
-def plotmode(building,mode,anim=0,Nframe = 100,fps = 30.):
-	z = building['h'].cumsum()
-	esp = building['esp']
-	idx = building['modeorder']
-	
-	factor = 0.1*z.max()/abs(building['phi'][idx[mode-1],:]).max()
-	
-	pl.ion()
-	pl.figure()
-	iter = 0
-	fac = factor*cos(2*pi*iter/(2*fps))
-	han = plotdef(building,squeeze(array(fac*building['phi'][idx[mode-1],:])))
-	pl.xlabel('Disp [m]')
-	pl.ylabel('z [m]')
-	pl.title('Mode Num. {0:.0f}, T = {1:.2f} [s]'.format(mode,building['T'][idx[mode-1]]))
-	pl.axis('equal')
-	
-	while iter < Nframe:
-		if anim == 0:
-			break
-		time.sleep(1./fps)
-		fac = factor*cos(2*pi*iter/(2*fps))
-		plotdef(building, squeeze(array(fac*building['phi'][idx[mode-1],:])), update=1, handles=han)
-		iter += 1
-			
+    k = zeros((nfloors,nfloors))
+    kg = zeros((nfloors,nfloors))
+    m = zeros((nfloors,nfloors))
 
+    if geom_eff == 1:
+        P = -m0[::-1].cumsum()[::-1]*g
+
+    for i in range(nfloors):
+        if i == (nfloors - 1):
+            k[i,i] = kcol[i]
+
+        else:
+            k[i,i] = kcol[i] + kcol[i+1]
+            k[i,i+1] = -kcol[i+1]
+            k[i+1,i] = -kcol[i+1]
+
+        if geom_eff == 1:
+            if i == (nfloors - 1):
+                kg[i,i] = P[i]/h[i]
+            else:
+                kg[i,i] = P[i]/h[i] + P[i+1]/h[i+1]
+                kg[i,i+1] = -P[i+1]/h[i+1]
+                kg[i+1,i] = -P[i+1]/h[i+1]
+
+        m[i,i] = m0[i]
+
+
+    # Find modes
+    D,PHI = linalg.eig(k+kg,m);
+    w = sqrt(real(D));
+    T = 2.*pi/w
+    idx = argsort(T) #ascending period sort
+    idx = idx[::-1]  #reverse order (to descending period)
+
+    #Form xsi% modal classical damping matrix
+    Mmodal = mat(dot(PHI.T,dot(m,PHI)))
+    PHI = mat(PHI)
+    M0 = mat(m)
+    C0 = M0*PHI*(linalg.inv(Mmodal))*(2*xsi/100.*diag(w)*Mmodal)*linalg.inv(Mmodal)*PHI.T*M0
+
+    #Actualizar estructura
+    building['T'] = T
+    building['c'] = C0
+    building['phi'] = PHI
+    building['modeorder'] = idx
+    building['k'] = k
+    building['kg'] = kg
+    building['m'] = m
+    building['nfloors'] = nfloors
+    building['rsis'] = ones((nfloors,1)) #Seismic input matrix
+    if geom_eff==1:
+        building['P'] = P
+
+    return building
+
+
+
+# PLOTMODE: Graficar forma modal
+#
+# Sintaxis:
+# plotmode(building,mode,anim=0,Nframe = 100,fps = 30.)
+#
+#   building: Estructura de datos (diccionario) que define al edificio.
+#   mode    : (int) > 0 que indica cual modo graficar (por defecto = 1)
+#   anim    : (bool) indica si animar el modo o no (por defecto no)
+#   Nframe,fps : Parametros para la animacion. Numero de frames 
+#                totales que animar a fps objetivo.
+#
+# Se puede ejecutar solo despues de haber aplicado  
+#  building =form(building)
+def plotmode(building,mode=1,anim=0,Nframe = 100,fps = 30.):
+    z = building['h'].cumsum()
+    esp = building['esp']
+    idx = building['modeorder']
+
+    factor = 0.1*z.max()/abs(building['phi'][idx[mode-1],:]).max()
+
+    pl.ion()
+    pl.figure()
+    iter = 0
+    fac = factor*cos(2*pi*iter/(2*fps))
+    han = plotdef(building,squeeze(array(fac*building['phi'][idx[mode-1],:])))
+    pl.xlabel('Disp [m]')
+    pl.ylabel('z [m]')
+    pl.title('Mode Num. {0:.0f}, T = {1:.2f} [s]'.format(mode,building['T'][idx[mode-1]]))
+    pl.axis('equal')
+
+    while iter < Nframe:
+        if anim == 0:
+            break
+        time.sleep(1./fps)
+        fac = factor*cos(2*pi*iter/(2*fps))
+        plotdef(building, squeeze(array(fac*building['phi'][idx[mode-1],:])), update=1, handles=han)
+        iter += 1
+
+
+
+#ANIMDEF: Animar la deformada de la estructura
+#
+#   building: Estructura de datos (diccionario) que define al edificio.
+#   u       : Arreglo numpy (matriz) con la solucion del problema.
+#
+#   Si,
+#   sol = response(building,input).
+#   u = sol['dis']
 def animdef(building,u,Nframe = 1,factor=1,dt=1./30,fps = 30.):
-	z = building['h'].cumsum()
-	esp = building['esp']
-	idx = building['modeorder']
-	
-	pl.ion()
-	pl.figure()
-	han = plotdef(building,squeeze(array(factor*u[0,:])))
-	pl.xlabel('Disp [m]')
-	pl.ylabel('z [m]')
-	#pl.title('t = {0:.2f} [s]'.format(t[i]))
-	pl.axis('equal')
-	iter = 1
-	fskip = ceil(dt*fps)
-	if fskip < 1:
-		fskip = 1
-	if dt*fps < 1.:
-		fskip = 1.
-		fps = 1./dt
-		
-	
-	while iter < min(Nframe*fskip,Nframe):
-		time.sleep(1./fps)
-		#ti = time.time()
-		pl.title('t = {0:05.2f} s'.format(dt*iter))
-		plotdef(building, squeeze(array(factor*u[iter,:])), update=1, handles=han)
-		iter += fskip
-		#tf = time.time()
-		#if (tf-ti) > 1/fps:
-			#fskip = floor((tf-ti)*fps)
+    z = building['h'].cumsum()
+    esp = building['esp']
+    idx = building['modeorder']
+
+    pl.ion()
+    pl.figure()
+    han = plotdef(building,squeeze(array(factor*u[0,:])))
+    pl.xlabel('Disp [m]')
+    pl.ylabel('z [m]')
+    #pl.title('t = {0:.2f} [s]'.format(t[i]))
+    pl.axis('equal')
+    iter = 1
+    fskip = ceil(dt*fps)
+    if fskip < 1:
+        fskip = 1
+    if dt*fps < 1.:
+        fskip = 1.
+        fps = 1./dt
 
 
-def plotdef(building,u,update=0,handles={}):
-	Npts = 30
-	esp = building['esp']
-	dx = building['dx']
-	z = building['h'].cumsum()
-	
-	#Interpolation functions
-	s = arange(0.,1.,1./Npts)
-	N1 = 1.-3.*s**2.+2*s**3.
-	N2 = 3.*s**2.-2.*s**3.
-	flr = {}
-	col = {}
-	
-	if update != 0:
-		flr = handles['flrs']
-		col = handles['cols']
-	xx = array([-dx/2, dx/2 , dx/2, -dx/2])
-	for i in range(building['nfloors']):		
-		yy = array([-esp[i]/2, -esp[i]/2 , esp[i]/2, esp[i]/2])
-		if update == 0:
-			flr[i], = pl.fill(xx + u[i], z[i] + yy, facecolor = '#ADADAD', alpha=0.7, edgecolor='k')
-		else:
-			ux = xx + u[i]
-			uy = z[i] + yy
-			xy = flr[i].get_xy()
-			xy[:,0] = ux[[0,1,2,3,0]]
-			flr[i].set_xy(xy)
-			
-		if i == 0:
-			z1 = 0
-			z2 = z[i]
-			u1 = 0
-			u2 = u[i]
-		else:
-			z1 = z[i-1]
-			z2 = z[i]
-			u1 = u[i-1]
-			u2 = u[i]
-		if update == 0:
-			col[2*i-1], = pl.plot(-dx/2 + N1*u1 + N2*u2, z1 + (z2-z1)*(s),'b')
-			col[2*i],   = pl.plot(dx/2 + N1*u1 + N2*u2, z1 + (z2-z1)*(s),'b')
-		else:
-			col[2*i-1].set_xdata(-dx/2 + N1*u1 + N2*u2)
-			col[2*i].set_xdata(dx/2 + N1*u1 + N2*u2)
-	pl.draw()
-	handles = dict(flrs=flr,cols=col)
-	return handles
-		
+    while iter < min(Nframe*fskip,Nframe):
+        time.sleep(1./fps)
+        #ti = time.time()
+        pl.title('t = {0:05.2f} s'.format(dt*iter))
+        plotdef(building, squeeze(array(factor*u[iter,:])), update=1, handles=han)
+        iter += fskip
+        #tf = time.time()
+        #if (tf-ti) > 1/fps:
+            #fskip = floor((tf-ti)*fps)
 
+
+
+
+#PLOTDEF: Graficar la deformada estatica de la estructura (sin animar)
+#
+#   Sintaxis:
+#   handles = plotdef(building,u,update=0,handles={},ax = -1):
+#
+#   handles:  (output si update==0) Es un diccionario con los handles a 
+#             la figura y elementos creados.
+#
+#   building: Estructura de datos (diccionario) que define al edificio.
+#   u       : Arreglo numpy (vector) con la deformada a graficar.
+#   update  : (bool) que indica si alcualizar una deformada existente 
+#              o dibujar una nueva. (por defecto 0)
+#   handles : handles de una figura ya creada (sirve si update == 1)
+#
+#  Ejemplo
+#
+#  sol1 = response(building,input1)
+#  sol2 = response(building,input1)
+#
+#  Seleccionar respuestas para el instante t[10]
+#  u1 = sol1['dis'][10,:]
+#  u2 = sol1['dis'][10,:]
+#
+#  handles = plotdef(building,u1)  (crea la figura usando u1 como 
+#                                   solucion )
+#  Actualizar la ventana con la solucion u2.
+#  plotdef(building,u2,update = 1, handles = handles)
+#            
+def plotdef(building,u,update=0,handles={},ax = -1):
+    Npts = 30
+    esp = building['esp']
+    dx = building['dx']
+    z = building['h'].cumsum()
+
+    #Interpolation functions
+    s = arange(0.,1.,1./Npts)
+    N1 = 1.-3.*s**2.+2*s**3.
+    N2 = 3.*s**2.-2.*s**3.
+    flr = {}
+    col = {}
+    if ax != -1:
+        pl.axes(ax)
+    else:
+        ax = subplot(111)
+        
+    if update != 0:
+        flr = handles['flrs']
+        col = handles['cols']
+    xx = array([-dx/2, dx/2 , dx/2, -dx/2])
+    for i in range(building['nfloors']):
+        yy = array([-esp[i]/2, -esp[i]/2 , esp[i]/2, esp[i]/2])
+        if update == 0:
+            flr[i], = pl.fill(xx + u[i], z[i] + yy, facecolor = 
+            '#ADADAD', alpha=0.7, edgecolor='k',axes=ax)
+        else:
+            ux = xx + u[i]
+            uy = z[i] + yy
+            xy = flr[i].get_xy()
+            xy[:,0] = ux[[0,1,2,3,0]]
+            flr[i].set_xy(xy)
+
+        if i == 0:
+            z1 = 0
+            z2 = z[i]
+            u1 = 0
+            u2 = u[i]
+        else:
+            z1 = z[i-1]
+            z2 = z[i]
+            u1 = u[i-1]
+            u2 = u[i]
+        if update == 0:
+            col[2*i-1], = pl.plot(-dx/2 + N1*u1 + N2*u2, z1 + (z2-z1)*(s),'b',axes=ax)
+            col[2*i],   = pl.plot(dx/2 + N1*u1 + N2*u2, z1 + (z2-z1)*(s),'b',axes=ax)
+        else:
+            col[2*i-1].set_xdata(-dx/2 + N1*u1 + N2*u2)
+            col[2*i].set_xdata(dx/2 + N1*u1 + N2*u2)
+    if ax == -1:
+        pl.draw()
+    handles = dict(flrs=flr,cols=col)
+    return handles
+
+
+
+
+# RESPONSE: Calcular solucion en el tiempo al problema definido.
+#
+#   building: Estructura de datos (diccionario) que define al edificio.
+#   input   : Estructura de datos (diccionario) que define el input.
+#
+#  input debe tener los siguientes campos:
+#       't'  : Arreglo numpy (vector) con el tiempo
+#       'ug' : Arreglo numpy (vector) con las aceleracciones 
+#              correspondientes
+#   ug[i] es la aceleraccion correspondiente al tiempo t[i]
+#
+#  La simulacion se ejecuta para todo los tiempo definidos
 def response(building, input):
-	#State-space representation
+    #State-space representation
 
-	A = mat(hstack([-linalg.solve(building['m'],building['k']),-linalg.solve(building['m'],building['c'])]) )
-	b = -building['rsis']
-	Ndof = building['nfloors']
-	z0 = zeros((2*Ndof),'d') #Starting condition
-	ug_f = interpolate.interp1d(input['t'],input['ug'],fill_value=0, bounds_error=0)
+    A = mat(hstack([-linalg.solve(building['m'],building['k']),-linalg.solve(building['m'],building['c'])]) )
+    b = -building['rsis']
+    Ndof = building['nfloors']
+    z0 = zeros((2*Ndof),'d') #Starting condition
+    ug_f = interpolate.interp1d(input['t'],input['ug'],fill_value=0, bounds_error=0)
 
-	#argtuple = (A,b,ug_f)
-	
-	#function for state-space representation of system
-	
-	def sssys(t, y):
-		N = len(y)
-		dzdt = 0.*y
-		dzdt[:(N/2)] = y[(N/2):]
-		dzdt[(N/2):] = dot(y,A.T) + ug_f(t)*b[:,0].T
+    #argtuple = (A,b,ug_f)
 
-		return squeeze(dzdt).real
+    #function for state-space representation of system
 
-	#Integration options
-	odesolver = integrate.ode(sssys)
-	odesolver.set_integrator('vode', method='bdf', order=5)
-	odesolver.set_initial_value(z0)
+    def sssys(t, y):
+        N = len(y)
+        dzdt = 0.*y
+        dzdt[:(N/2)] = y[(N/2):]
+        dzdt[(N/2):] = dot(y,A.T) + ug_f(t)*b[:,0].T
 
-	tf = input['t'].max()
-	tout = input['t']
-	dt = tout[2] - tout[1]
-	zout = zeros((len(input['t']),msize(A,1)))
-	i = 0
-	while odesolver.successful() and odesolver.t < tf:
-		odesolver.integrate(odesolver.t + dt)
-		tout[i] = odesolver.t
-		zout[i,:] = odesolver.y
-		i += 1
-	
-	sol = {}
-	sol['dis'] = zout[:,:Ndof]
-	sol['vel'] = zout[:,Ndof:]
-	sol['acc'] = (A*matrix(zout.T) + b*matrix(ug_f(tout))).T
-	sol['t'] = tout
-	
-	return sol
+        return squeeze(dzdt).real
 
+    #Integration options
+    odesolver = integrate.ode(sssys)
+    odesolver.set_integrator('vode', method='bdf', order=5)
+    odesolver.set_initial_value(z0)
+
+    tf = input['t'].max()
+    tout = input['t']
+    dt = tout[2] - tout[1]
+    zout = zeros((len(input['t']),msize(A,1)))
+    i = 0
+    while odesolver.successful() and odesolver.t < tf:
+        odesolver.integrate(odesolver.t + dt)
+        tout[i] = odesolver.t
+        zout[i,:] = odesolver.y
+        i += 1
+
+    sol = {}
+    sol['dis'] = zout[:,:Ndof]
+    sol['vel'] = zout[:,Ndof:]
+    sol['acc'] = (A*matrix(zout.T) + b*matrix(ug_f(tout))).T
+    sol['t'] = tout
+
+    return sol
+
+
+
+# FLOORRESP: Graficar solucion en el tiempo para un piso en particular
+#
+# Sintaxis:
+#  h = floorresp(building,input,sol,floor)
+#
+#   building: Estructura de datos (diccionario) que define al edificio.
+#   input   : Estructura de datos (diccionario) que define el input.
+#   sol     : Estructura de datos (diccionario) que define la solucion 
+#             (generada por sol = response(building,input).
+#   floor   : (int)>=1 que define el piso donde se quiere graficar la 
+#              respuesta.
+# 
+#   h       : (output) handle a la figura generada
 def floorresp(building,input,sol,floor):
 
-	pl.figure()
-	pl.subplot(4,1,1)
-	pl.plot(input['t'],input['ug'])
-	pl.ylabel('Ug')
-	pl.title('Response at floor Num. {0: .0f}'.format(floor))
+    h = pl.figure()
+    pl.subplot(4,1,1)
+    pl.plot(input['t'],input['ug'])
+    pl.ylabel('Ug')
+    pl.title('Response at floor Num. {0: .0f}'.format(floor))
 
-	pl.subplot(4,1,2)
-	pl.plot(sol['t'],sol['dis'][:,floor-1])
-	pl.ylabel('D [m]')
-	pl.subplot(4,1,3)
-	pl.plot(sol['t'],sol['vel'][:,floor-1])
-	pl.ylabel('V [m/s]')
-	pl.subplot(4,1,4)
-	pl.plot(sol['t'],sol['acc'][:,floor-1])
-	pl.ylabel('A [m/**s]')
-	pl.xlabel('t [sec]')
+    pl.subplot(4,1,2)
+    pl.plot(sol['t'],sol['dis'][:,floor-1])
+    pl.ylabel('D [m]')
+    pl.subplot(4,1,3)
+    pl.plot(sol['t'],sol['vel'][:,floor-1])
+    pl.ylabel('V [m/s]')
+    pl.subplot(4,1,4)
+    pl.plot(sol['t'],sol['acc'][:,floor-1])
+    pl.ylabel('A [m/**s]')
+    pl.xlabel('t [sec]')
 
-	pl.show()
-	
+    return h
+
+
+
+# ENVRESP: Graficar solucion envolvente para algun tipo de output
+#
+# Sintaxis:
+#   handles = envresp(building,input,sol,type='acc')
+#
+#   building: Estructura de datos (diccionario) que define al edificio.
+#   input   : Estructura de datos (diccionario) que define el input.
+#   sol     : Estructura de datos (diccionario) que define la solucion 
+#   type    : (string) Tipo de grafico a generar, puede ser uno de
+#       type = 'acc': Graficar envolventes de aceleraciones de piso
+#       type = 'vel': Graficar envolventes de velocidades de piso
+#       type = 'dis': Graficar envolventes de desplazamientos de piso
+#       type = 'dri': Graficar envolventes de drift de entrepiso (implementar)
+#       type = 'cor': Graficar envolventes de corte de entrepiso (implementar)
+#       type = 'mom': Graficar envolventes de momento de entrepiso (implementar)
 def envresp(building,input,sol,type='acc'):
+    #Evaluar alturas
+    z = building['h'].cumsum()
+    
+    #Inicializar figura
+    pl.figure()
+    
+    #factor = 0.1*z.max()/abs(building['acc']).max()   #Factor de escala
+    
+    #Graficar edificio al centro
+    sp1 = pl.subplot(3,1,2)
+    plbuild = plotdef(building,0*z,ax=sp1)
+    pl.title(building['name'])
+    
+    #Calcular respuestas maximas    
+    xmax = sol[type].max(0)
+    xmin = sol[type].min(0)
+    
+    #Panel izquierdo
+    sp2 = pl.subplot(1,3,1)
+    pl2 = pl.plot(squeeze(array(xmax)),squeeze(z),'b')
+    pl.ylabel('Altura')
+    if type == 'acc':
+        pl.xlabel('Aceleraciones')
+        
+    #Panel derecho
+    sp3 = pl.subplot(1,3,3)
+    pl3 = pl.plot(squeeze(array(xmin)),squeeze(z),'b')
+    if type == 'acc':
+        pl.xlabel('Aceleraciones')
+    
+    #Devolver handles a las componentes de la figura
+    handles = {}
+    handles['plbuild'] = plbuild
+    handles['pl2'] = pl2
+    handles['pl3'] = pl3
+    handles['sp1'] = sp1
+    handles['sp2'] = sp2
+    handles['sp3'] = sp3
 
-	z = building['h'].cumsum()
-	pl.figure()
-	#factor = 0.1*z.max()/abs(building['acc']).max()
-	pl.plot(0*z,z,'k--')
-	for n in arange(building['nfloors']):
-		xord = sol[type][:,n]
-		yord = z[n] + 0*xord
-		pl.plot(xord,yord,'r')
-	
-	
-	xmax = sol[type].max(0)
-	xmin = sol[type].min(0)
-	pl.plot(squeeze(array(xmax)),squeeze(z),'b')
-	pl.plot(squeeze(array(xmin)),squeeze(z),'b')
-	
-	pl.show()
+    return handles
 
+
+
+# FREQRESP: Graficar funcion de respuesta en frecuencia del sistema
+#
+# Sintaxis:
+#   freqresp(building,type=0,f0=0.,f1=10.,nfreq=200.,plottype = 'plot', plotthese = -1, axhan=-1)
+#
+#   building: Estructura de datos (diccionario) que define al edificio.
+#   type    : (int) que define el tipo de output buscado. Puede ser:
+#           type = 0: Output desplazamientos
+#           type = 1: Output velocidades
+#           type = 2: Output aceleraciones
+#   f0      : Frecuencia inicial (minima) a graficar.
+#   f1      : Frecuencia final (maxima) a graficar.
+#   nfreq   : Numero de frecuencias a generar
+#   plottype: String con el nombre de la funcion a usar para graficar. 
+#       Por ejemplo:
+#           plottype = 'plot'       :  Plot simple.
+#           plottype = 'loglog'     :  Plot logaritmico doble.
+#           plottype = 'semilogx'   :  Plot semilogaritmico en x.
+#           plottype = 'semilogy'   :  Plot semilogaritmico en y.
+#   plotthese: Arreglo numpy con (int)s que definen para que pisos se 
+#              graficara.
+#   axhan   : Handle a la figura en el que se desea graficar. (se usa 
+#             al comparar funciones)
 def freqresp(building,type=0,f0=0.,f1=10.,nfreq=200.,plottype = 'plot', plotthese = -1, axhan=-1):
-	
-	M = matrix(building['m'])
-	C = building['c']
-	K = building['k']
-	r = matrix(building['rsis'])
-	
-	omegas = arange(2*pi*f0,2*pi*f1,2*pi*(f1-f0)/nfreq)
-	U = zeros((building['nfloors'],nfreq))
-	
-	for i in arange(nfreq):
-		w = omegas[i]
-		U[:,i] = abs((1j*w)**type * linalg.solve(-w**2*M + (1j*w)*C + K, -M*r)).T
-	
-	#freq = {}
-	#freq['f'] = omegas/(2*pi)
-	#freq['U'] = U
-	#return freq
-	
-	if plotthese == -1:
-		plotthese = arange(building['nfloors'])
-	
-	if axhan==-1:
-		pl.figure()
-		ax = pl.subplot(1,1,1)
-	else:
-		ax = axhan
-	
-	for i in plotthese:
-		
-		if plottype.lower() == 'loglog':
-			ax.loglog(squeeze(omegas)/(2*pi), squeeze(U[i,:]), label='Piso {0:.0f}'.format(i))
-		elif plottype.lower() == 'semilox':
-			ax.semilogx(squeeze(omegas)/(2*pi), squeeze(U[i,:]), label='Piso {0:.0f}'.format(i))
-		elif plottype.lower() == 'semilogy':
-			ax.semilogy(squeeze(omegas)/(2*pi), squeeze(U[i,:]), label='Piso {0:.0f}'.format(i))
-		else:
-			ax.plot(squeeze(omegas)/(2*pi), squeeze(U[i,:]), label='Piso {0:.0f}'.format(i))
-			
-	handles, labels = ax.get_legend_handles_labels()
-	ax.legend(handles, labels)
-	pl.xlabel('f [Hz]')
-	pl.title('Funcion de respuesta en frecuencia')
-	if type == 0:
-		pl.ylabel('Desplazamientos')
-	elif type == 1:
-		pl.ylabel('Velocidades')
-	elif type == 2:
-		pl.ylabel('Aceleraciones')
-	
+
+    M = matrix(building['m'])
+    C = building['c']
+    K = building['k']
+    r = matrix(building['rsis'])
+
+    omegas = arange(2*pi*f0,2*pi*f1,2*pi*(f1-f0)/nfreq)
+    U = zeros((building['nfloors'],nfreq))
+
+    for i in arange(nfreq):
+        w = omegas[i]
+        U[:,i] = abs((1j*w)**type * linalg.solve(-w**2*M + (1j*w)*C + K, -M*r)).T
+
+    #freq = {}
+    #freq['f'] = omegas/(2*pi)
+    #freq['U'] = U
+    #return freq
+
+    if plotthese == -1:
+        plotthese = arange(building['nfloors'])
+
+    if axhan==-1:
+        pl.figure()
+        ax = pl.subplot(1,1,1)
+    else:
+        ax = axhan
+
+    for i in plotthese:
+
+        if plottype.lower() == 'loglog':
+            ax.loglog(squeeze(omegas)/(2*pi), squeeze(U[i,:]), label='Piso {0:.0f}'.format(i))
+        elif plottype.lower() == 'semilox':
+            ax.semilogx(squeeze(omegas)/(2*pi), squeeze(U[i,:]), label='Piso {0:.0f}'.format(i))
+        elif plottype.lower() == 'semilogy':
+            ax.semilogy(squeeze(omegas)/(2*pi), squeeze(U[i,:]), label='Piso {0:.0f}'.format(i))
+        else:
+            ax.plot(squeeze(omegas)/(2*pi), squeeze(U[i,:]), label='Piso {0:.0f}'.format(i))
+
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles, labels)
+    pl.xlabel('f [Hz]')
+    pl.title('Funcion de respuesta en frecuencia')
+    if type == 0:
+        pl.ylabel('Desplazamientos')
+    elif type == 1:
+        pl.ylabel('Velocidades')
+    elif type == 2:
+        pl.ylabel('Aceleraciones')
+
+
+
+# COMPARE_BUILDINGS: Comparar datos dinamicos y funciones de respuesta 
+# en frecuencia para dos edificios.
+#
+# Sintaxis: 
+#  compare_buildings(build1,build2,type=0,f0=0.,f1=20.,nfreq=200.,plottype = 'plot')
+#
+#   build1: Estructura de datos (diccionario) que define al edificio 1.
+#   build2: Estructura de datos (diccionario) que define al edificio 2.
+# 
+# El resto de los parametros igual que FREQRESP. Importante que esta 
+# funcion solo se puede usar despues de inicializar los edificios con:
+#
+#  build1 = form(build1)
+#  build2 = form(build2)
+#
+# Ademas esta funcion escribe en la linea de comando algunos datos 
+# para comparar ambos edificios. (implementar que la salida sea a un 
+# .txt).
 def compare_buildings(build1,build2,type=0,f0=0.,f1=20.,nfreq=200.,plottype = 'plot'):
-	Nf1 = build1['nfloors']
-	Nf2 = build2['nfloors']
-	print ''
-	print '----------------------------------------'
-	print 'Building Comparison'
-	print '----------------------------------------'
-	print 'Building 1 Name: '+build1['name']
-	print 'Building 2 Name: '+build2['name']
-	print '----------------------------------------'
-	print '           Building 1     Building 2    '
-	print 'Nfloors ={0:15.0f}{1:15.0f}'.format(Nf1,Nf2)
-	print 'Mass    ={0:15.5f}{1:15.5f}'.format(build1['m'].sum(),build2['m'].sum())
-	print 'Weight  ={0:15.5f}{1:15.5f}'.format(build1['m'].sum()*build1['g'],build2['m'].sum()*build1['g'])
-	print ''
-	print 'Periods [s]'
+    Nf1 = build1['nfloors']
+    Nf2 = build2['nfloors']
+    print ''
+    print '----------------------------------------'
+    print 'Building Comparison'
+    print '----------------------------------------'
+    print 'Building 1 Name: '+build1['name']
+    print 'Building 2 Name: '+build2['name']
+    print '----------------------------------------'
+    print '           Building 1     Building 2    '
+    print 'Nfloors ={0:15.0f}{1:15.0f}'.format(Nf1,Nf2)
+    print 'Mass    ={0:15.5f}{1:15.5f}'.format(build1['m'].sum(),build2['m'].sum())
+    print 'Weight  ={0:15.5f}{1:15.5f}'.format(build1['m'].sum()*build1['g'],build2['m'].sum()*build1['g'])
+    print ''
+    print 'Periods [s]'
 
-	for i in range(max(Nf1,Nf2)):
-		if i > Nf1:
-			print 'Mode{0:3.0f} =               {1:15.7f}'.format(i+1,build2['T'][build2['modeorder'][i]])
-		elif i > Nf2:
-			print 'Mode{0:3.0f} ={1:15.7f}               '.format(i+1,build1['T'][build1['modeorder'][i]])
-		else:
-			print 'Mode{0:3.0f} ={1:15.7f}{2:15.7f}'.format(i+1,build1['T'][build1['modeorder'][i]],build2['T'][build2['modeorder'][i]])
-			
-	print ''
-	print 'Frequencies [Hz]'
+    for i in range(max(Nf1,Nf2)):
+        if i > Nf1:
+            print 'Mode{0:3.0f} =               {1:15.7f}'.format(i+1,build2['T'][build2['modeorder'][i]])
+        elif i > Nf2:
+            print 'Mode{0:3.0f} ={1:15.7f}               '.format(i+1,build1['T'][build1['modeorder'][i]])
+        else:
+            print 'Mode{0:3.0f} ={1:15.7f}{2:15.7f}'.format(i+1,build1['T'][build1['modeorder'][i]],build2['T'][build2['modeorder'][i]])
 
-	for i in range(max(Nf1,Nf2)):
-		if i > Nf1:
-			print 'Mode{0:3.0f} =               {1:15.7f}'.format(i+1,1/build2['T'][build2['modeorder'][i]])
-		elif i > Nf2:
-			print 'Mode{0:3.0f} ={1:15.7f}               '.format(i+1,1/build1['T'][build1['modeorder'][i]])
-		else:
-			print 'Mode{0:3.0f} ={1:15.7f}{2:15.7f}'.format(i+1,1/build1['T'][build1['modeorder'][i]],1/build2['T'][build2['modeorder'][i]])
-	
-	fig = pl.figure()	
-	ax1 = pl.subplot(1,2,1)
-	freqresp(build1, axhan = ax1, type = type, f0 = f0, f1 = f1, nfreq = nfreq, plottype = plottype)
-	pl.title(build1['name'])
-	
-	ax2 = pl.subplot(1,2,2)
-	freqresp(build2, axhan = ax2, type = type, f0 = f0, f1 = f1, nfreq = nfreq, plottype = plottype)
-	pl.ylabel('')
-	pl.title(build2['name'])
-	
-	fmax = max(ax1.axis()[1],ax2.axis()[1])
-	fmin = min(ax1.axis()[0],ax2.axis()[0])
-	ymax = max(ax1.axis()[3],ax2.axis()[3])
-	ymin = min(ax1.axis()[2],ax2.axis()[2])
-	
-	ax1.axis(array([fmin,fmax,ymin,ymax]))
-	ax2.axis(array([fmin,fmax,ymin,ymax]))
-	
-	
-	handles = {}
-	handles['fig'] = fig
-	handles['ax1'] = ax1
-	handles['ax2'] = ax2
-	
-	return handles
+    print ''
+    print 'Frequencies [Hz]'
+
+    for i in range(max(Nf1,Nf2)):
+        if i > Nf1:
+            print 'Mode{0:3.0f} =               {1:15.7f}'.format(i+1,1/build2['T'][build2['modeorder'][i]])
+        elif i > Nf2:
+            print 'Mode{0:3.0f} ={1:15.7f}               '.format(i+1,1/build1['T'][build1['modeorder'][i]])
+        else:
+            print 'Mode{0:3.0f} ={1:15.7f}{2:15.7f}'.format(i+1,1/build1['T'][build1['modeorder'][i]],1/build2['T'][build2['modeorder'][i]])
+
+    fig = pl.figure()
+    ax1 = pl.subplot(1,2,1)
+    freqresp(build1, axhan = ax1, type = type, f0 = f0, f1 = f1, nfreq = nfreq, plottype = plottype)
+    pl.title(build1['name'])
+
+    ax2 = pl.subplot(1,2,2)
+    freqresp(build2, axhan = ax2, type = type, f0 = f0, f1 = f1, nfreq = nfreq, plottype = plottype)
+    pl.ylabel('')
+    pl.title(build2['name'])
+
+    fmax = max(ax1.axis()[1],ax2.axis()[1])
+    fmin = min(ax1.axis()[0],ax2.axis()[0])
+    ymax = max(ax1.axis()[3],ax2.axis()[3])
+    ymin = min(ax1.axis()[2],ax2.axis()[2])
+
+    ax1.axis(array([fmin,fmax,ymin,ymax]))
+    ax2.axis(array([fmin,fmax,ymin,ymax]))
+
+
+    handles = {}
+    handles['fig'] = fig
+    handles['ax1'] = ax1
+    handles['ax2'] = ax2
+
+    return handles
 
