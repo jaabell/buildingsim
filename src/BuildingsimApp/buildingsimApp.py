@@ -6,8 +6,8 @@ from tkFileDialog import askopenfilename
 from tkFileDialog import asksaveasfilename
 #import elementtree.ElementTree as ET
 import sys
+import os
 python_version = sys.version_info[:2]
-print >> sys.stderr, "Python version:", sys.version_info
 if python_version >= (2, 5):
 	import xml.etree.cElementTree as ET
 else:
@@ -90,20 +90,20 @@ class App(Frame):
     def prepare_to_building(self):
         if self.buildingName:
             self.buildings = []
-            Label(self, text="Edificio ", font=("Verdana", 12)).grid(row=0, column=0, padx=5, pady=5, sticky=E)
-            self.nameLabel = Label(self, text=self.buildingName)
+            Label(self, text="Edificio ", font=("Verdana", 14), bg=self.mainBg).grid(row=0, column=0, padx=5, pady=5, sticky=NE)
+            self.nameLabel = Label(self, text=self.buildingName, bg=self.mainBg)
             self.nameLabel["fg"] = "red"
-            self.nameLabel["font"] = ("Verdana", 12)
-            self.nameLabel.grid(row=0, column=1, padx=5, pady=5, sticky=W)
+            self.nameLabel["font"] = ("Verdana", 14)
+            self.nameLabel.grid(row=0, column=1, padx=5, pady=5, sticky=NW)
 
             # Accion
             self.runButton = Button(self, text="Calcular", command=self.run_action, font=("Verdana", 14), width=16, height=2)
             self.runButton.grid(row=0, column=3, columnspan=2, padx=10, pady=5)
 
             # Base
-            Label(self, text="Base", font=("Verdana", 12)).grid(row=1, column=0, columnspan=3, padx=5, pady=10)
-            Label(self, text="Largo [m]", font=("Verdana", 10)).grid(row=2, column=0, padx=5, sticky=E)
-            Label(self, text="Ancho [m]", font=("Verdana", 10)).grid(row=3, column=0, padx=5, sticky=E)
+            Label(self, text="Base", font=("Verdana", 12), bg=self.mainBg).grid(row=1, column=0, columnspan=3, padx=5, pady=10)
+            Label(self, text="Largo [m]", font=("Verdana", 10), bg=self.mainBg).grid(row=2, column=0, padx=5, sticky=E)
+            Label(self, text="Ancho [m]", font=("Verdana", 10), bg=self.mainBg).grid(row=3, column=0, padx=5, sticky=E)
 
             self.dxEntry = Entry(self)
             self.dxEntry.grid(row=2, column=1, padx=3)
@@ -112,24 +112,24 @@ class App(Frame):
             self.dyEntry.grid(row=3, column=1, padx=3)
 
             # Pisos
-            Label(self, text="Pisos", font=("Verdana", 12)).grid(row=4, column=0, columnspan=3, padx=5, pady=5)
-            Label(self, text="Altura [m]", font=("Verdana", 10)).grid(row=5, column=0, padx=5, sticky=E)
+            Label(self, text="Pisos", font=("Verdana", 12), bg=self.mainBg).grid(row=4, column=0, columnspan=3, padx=5, pady=5)
+            Label(self, text="Altura [m]", font=("Verdana", 10), bg=self.mainBg).grid(row=5, column=0, padx=5, sticky=E)
             self.hEntry = Entry(self)
             self.hEntry.grid(row=5, column=1, padx=5)
 
-            Label(self, text="Modulo Elasticidad [tonf/m^2]", font=("Verdana", 10)).grid(row=6, column=0, padx=5, sticky=E)
+            Label(self, text="Modulo Elasticidad [tonf/m^2]", font=("Verdana", 10), bg=self.mainBg).grid(row=6, column=0, padx=5, sticky=E)
             self.eEntry = Entry(self)
             self.eEntry.grid(row=6, column=1, padx=5)
 
-            Label(self, text="Momento Inercia [m^4]", font=("Verdana", 10)).grid(row=7, column=0, padx=5, sticky=E)
+            Label(self, text="Momento Inercia [m^4]", font=("Verdana", 10), bg=self.mainBg).grid(row=7, column=0, padx=5, sticky=E)
             self.iEntry = Entry(self)
             self.iEntry.grid(row=7, column=1, padx=5)
 
-            Label(self, text="Peso Unitario Losa [tonf/m^3]", font=("Verdana", 10)).grid(row=8, column=0, padx=5, sticky=E)
+            Label(self, text="Peso Unitario Losa [tonf/m^3]", font=("Verdana", 10), bg=self.mainBg).grid(row=8, column=0, padx=5, sticky=E)
             self.gammaEntry = Entry(self)
             self.gammaEntry.grid(row=8, column=1, padx=5)
 
-            Label(self, text="Espesor [m]", font=("Verdana", 10)).grid(row=9, column=0, padx=5, sticky=E)
+            Label(self, text="Espesor [m]", font=("Verdana", 10), bg=self.mainBg).grid(row=9, column=0, padx=5, sticky=E)
             self.espEntry = Entry(self)
             self.espEntry.grid(row=9, column=1, padx=5)
 
@@ -200,12 +200,34 @@ class App(Frame):
         self.menu.add_cascade(label="Edificio", menu=self.buildingMenu)
 
     def __init__(self, master):
-        Frame.__init__(self, master)
-        self.master.title("Calculadora de Comportamiento de Edificios")
-        self.grid(padx=15, pady=15,sticky=N+S+E+W)
+        self.mainBg = "white"
+        Frame.__init__(self, master, width=master.winfo_screenwidth(), height=master.winfo_screenheight(), bg=self.mainBg)
+        master.config(bg="#003C6E")
         self.create_menu()
+        
+        self.grid(padx=20, pady=20,sticky=N+S+E+W)
+        self.grid_propagate(0)
+        
+        self.master.title("Calculadora de Comportamiento de Edificios")        
+        
+        self.canvas = Canvas(width = 77, height = 98)        
+        self.gifLogo = PhotoImage(file = 'imgs/ing.gif')
+        self.canvas.create_image(0, 0, image = self.gifLogo, anchor = NW)
+        self.canvas.grid(row=0, column=0, padx=0, pady=0, sticky=NW)
 
 #main
 root = Tk()
+toplevel = root.winfo_toplevel()
+# Windows
+try:    
+    toplevel.wm_state('zoomed')
+#Others
+except:
+    w, h = root.winfo_screenwidth(), root.winfo_screenheight() - 60
+    geom_string = "%dx%d+0+0" % (w,h)
+    toplevel.wm_geometry(geom_string)
+exeFileName = sys.argv[0]
+exeDirectory = os.path.dirname(exeFileName)
+os.chdir(exeDirectory)
 w = App(root)
 root.mainloop()
