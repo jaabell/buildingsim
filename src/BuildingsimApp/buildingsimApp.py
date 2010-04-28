@@ -4,6 +4,7 @@ from Tkinter import *
 import tkSimpleDialog
 from tkFileDialog import askopenfilename
 from tkFileDialog import asksaveasfilename
+from ttk import *
 #import elementtree.ElementTree as ET
 import sys
 import os
@@ -90,20 +91,20 @@ class App(Frame):
     def prepare_to_building(self):
         if self.buildingName:
             self.buildings = []
-            Label(self, text="Edificio ", font=("Verdana", 14), bg=self.mainBg).grid(row=0, column=0, padx=5, pady=5, sticky=NE)
-            self.nameLabel = Label(self, text=self.buildingName, bg=self.mainBg)
-            self.nameLabel["fg"] = "red"
-            self.nameLabel["font"] = ("Verdana", 14)
+            
+            #Create Widgets            
+            Label(self, text="Edificio ", style="Title.TLabel").grid(row=0, column=0, padx=5, pady=5, sticky=NE)
+            self.nameLabel = Label(self, text=self.buildingName, style="Red.TLabel")
             self.nameLabel.grid(row=0, column=1, padx=5, pady=5, sticky=NW)
 
             # Accion
-            self.runButton = Button(self, text="Calcular", command=self.run_action, font=("Verdana", 14), width=16, height=2)
+            self.runButton = Button(self, text="Calcular", command=self.run_action)
             self.runButton.grid(row=0, column=3, columnspan=2, padx=10, pady=5)
 
             # Base
-            Label(self, text="Base", font=("Verdana", 12), bg=self.mainBg).grid(row=1, column=0, columnspan=3, padx=5, pady=10)
-            Label(self, text="Largo [m]", font=("Verdana", 10), bg=self.mainBg).grid(row=2, column=0, padx=5, sticky=E)
-            Label(self, text="Ancho [m]", font=("Verdana", 10), bg=self.mainBg).grid(row=3, column=0, padx=5, sticky=E)
+            Label(self, text="Base", style="Title.TLabel").grid(row=1, column=0, columnspan=3, padx=5, pady=10)
+            Label(self, text="Largo [m]").grid(row=2, column=0, padx=5, sticky=E)
+            Label(self, text="Ancho [m]").grid(row=3, column=0, padx=5, sticky=E)
 
             self.dxEntry = Entry(self)
             self.dxEntry.grid(row=2, column=1, padx=3)
@@ -112,28 +113,28 @@ class App(Frame):
             self.dyEntry.grid(row=3, column=1, padx=3)
 
             # Pisos
-            Label(self, text="Pisos", font=("Verdana", 12), bg=self.mainBg).grid(row=4, column=0, columnspan=3, padx=5, pady=5)
-            Label(self, text="Altura [m]", font=("Verdana", 10), bg=self.mainBg).grid(row=5, column=0, padx=5, sticky=E)
+            Label(self, text="Pisos", style="Title.TLabel").grid(row=4, column=0, columnspan=3, padx=5, pady=5)
+            Label(self, text="Altura [m]").grid(row=5, column=0, padx=5, sticky=E)
             self.hEntry = Entry(self)
             self.hEntry.grid(row=5, column=1, padx=5)
 
-            Label(self, text="Modulo Elasticidad [tonf/m^2]", font=("Verdana", 10), bg=self.mainBg).grid(row=6, column=0, padx=5, sticky=E)
+            Label(self, text="Modulo Elasticidad [tonf/m^2]").grid(row=6, column=0, padx=5, sticky=E)
             self.eEntry = Entry(self)
             self.eEntry.grid(row=6, column=1, padx=5)
 
-            Label(self, text="Momento Inercia [m^4]", font=("Verdana", 10), bg=self.mainBg).grid(row=7, column=0, padx=5, sticky=E)
+            Label(self, text="Momento Inercia [m^4]").grid(row=7, column=0, padx=5, sticky=E)
             self.iEntry = Entry(self)
             self.iEntry.grid(row=7, column=1, padx=5)
 
-            Label(self, text="Peso Unitario Losa [tonf/m^3]", font=("Verdana", 10), bg=self.mainBg).grid(row=8, column=0, padx=5, sticky=E)
+            Label(self, text="Peso Unitario Losa [tonf/m^3]").grid(row=8, column=0, padx=5, sticky=E)
             self.gammaEntry = Entry(self)
             self.gammaEntry.grid(row=8, column=1, padx=5)
 
-            Label(self, text="Espesor [m]", font=("Verdana", 10), bg=self.mainBg).grid(row=9, column=0, padx=5, sticky=E)
+            Label(self, text="Espesor [m]").grid(row=9, column=0, padx=5, sticky=E)
             self.espEntry = Entry(self)
             self.espEntry.grid(row=9, column=1, padx=5)
 
-            self.addFloorButton = Button(self, text="Agregar", command=self.add_floor, width=10)
+            self.addFloorButton = Button(self, text="Agregar >>", command=self.add_floor, width=10)
             self.addFloorButton.grid(row=5, column=2, rowspan=2, padx=5)
 
             self.editFloorButton = Button(self, text="Cambiar", command=self.change_floor, width=10)
@@ -186,6 +187,14 @@ class App(Frame):
         tree = ET.ElementTree(buildingNode)
         tree.write(filename)
 
+    def create_styles(self):
+        #Create styles         
+        self.mainBg = "white"        
+        style = Style()        
+        style.configure("TLabel", font=("Verdana", 12))
+        style.configure("Title.TLabel", font=("Verdana", 14))
+        style.configure("Red.TLabel", font=("Verdana", 14), foreground="red")
+    
     def create_menu(self):
         self.menu = Menu(self)
         self.master.config(menu=self.menu)
@@ -199,10 +208,11 @@ class App(Frame):
         self.buildingMenu.add_command(label="Salir", command=self.quit)
         self.menu.add_cascade(label="Edificio", menu=self.buildingMenu)
 
-    def __init__(self, master):
-        self.mainBg = "white"
-        Frame.__init__(self, master, width=master.winfo_screenwidth(), height=master.winfo_screenheight(), bg=self.mainBg)
-        master.config(bg="#003C6E")
+    def __init__(self, master):        
+        self.create_styles()
+        Frame.__init__(self, master, width=master.winfo_screenwidth(), height=master.winfo_screenheight()) # bg=self.mainBg
+        
+        master.config(bg="#003C6E")        
         self.create_menu()
         
         self.grid(padx=20, pady=20,sticky=N+S+E+W)
