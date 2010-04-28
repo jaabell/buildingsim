@@ -1,7 +1,7 @@
 from scipy import *
 #Harmonic or Chirp-Like
 def harmonic(t,a,f=1.,b=0,K=0.,tmin=0.,tmax=Inf,):
-    y = (a*sin(2.*pi*(f*t + K*t**2/2)) + b*cos(f*t + K*t**2/2))*(t>=tmin)*(t<=tmax)
+    y = (a*sin(2.*pi*(f*t + K*t**2/2)) + b*cos(2.*pi*(f*t + K*t**2/2)))*(t>=tmin)*(t<=tmax)
     return y
 
 #Rectangular
