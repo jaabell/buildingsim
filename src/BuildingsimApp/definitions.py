@@ -1,8 +1,11 @@
+# Contiene principales funciones de procesamiento y graficacion de 
+# BuildingSimApp.
+#
 from scipy import *
 from scipy import optimize, linalg, integrate, interpolate
 import pylab as pl
 import time
-
+#
 #No se usa
 def findperiod(k, beta, Dx, Dy, ex, ey, m0):
     kx = k
@@ -16,15 +19,13 @@ def findperiod(k, beta, Dx, Dy, ex, ey, m0):
     D, PHI = linalg.eig(K0,M0)
     T = 2*pi/sqrt(real(D))
     return T.max()
-
-
-
+#
+#
 #No se usa
 def objfun(k, beta, Dx, Dy, ex, ey, m0,Tobj):
     return Tobj - findperiod(k, beta, Dx, Dy, ex, ey, m0)
-
-
-
+#
+#
 #No se usa
 def msize(*args):#MATLAB-like size function
     Nargs = len(args)
@@ -35,12 +36,11 @@ def msize(*args):#MATLAB-like size function
 
     if Nargs > 1:
         return sz[args[1]]
-
-
-
+#
+#
 #De uso interno
 # M = blkdiag(A,B,C,D,...)
-# A,B,C,D,... son arreglos numpy. Esta función devuelve un arreglo M
+# A,B,C,D,... son arreglos numpy. Esta funcion devuelve un arreglo M
 # diagonal por bloques, donde los bloques son A,B,C,D,...
 # La cantidad de arreglos no esta limitada. La matriz M creada es de 
 # estructura llena (ceros explicitos).
@@ -52,8 +52,8 @@ def blkdiag(*args):
         b = zeros((msize(A,0),msize(args[i+1],1)))
         A = vstack([hstack([A,b]),hstack([b.transpose(),args[i+1]])])
     return A
-
-
+#
+#
 # FORM: Inicializa la estructura.
 #
 # Sintaxis: building = form(building)
@@ -148,13 +148,12 @@ def form(building,geom_eff=0):
         building['P'] = P
 
     return building
-
-
-
+#
+#
 # PLOTMODE: Graficar forma modal
 #
 # Sintaxis:
-# plotmode(building,mode,anim=0,Nframe = 100,fps = 30.)
+# handle = plotmode(building,mode,anim=0,Nframe = 100,fps = 30.)
 #
 #   building: Estructura de datos (diccionario) que define al edificio.
 #   mode    : (int) > 0 que indica cual modo graficar (por defecto = 1)
@@ -164,6 +163,8 @@ def form(building,geom_eff=0):
 #
 # Se puede ejecutar solo despues de haber aplicado  
 #  building =form(building)
+#
+# Devuelve la handle a la figura generada
 def plotmode(building,mode=1,anim=0,Nframe = 100,fps = 30.):
     z = building['h'].cumsum()
     esp = building['esp']
@@ -171,8 +172,7 @@ def plotmode(building,mode=1,anim=0,Nframe = 100,fps = 30.):
 
     factor = 0.1*z.max()/abs(building['phi'][idx[mode-1],:]).max()
 
-    pl.ion()
-    pl.figure()
+    handle = pl.figure()
     iter = 0
     fac = factor*cos(2*pi*iter/(2*fps))
     han = plotdef(building,squeeze(array(fac*building['phi'][idx[mode-1],:])))
@@ -189,8 +189,9 @@ def plotmode(building,mode=1,anim=0,Nframe = 100,fps = 30.):
         plotdef(building, squeeze(array(fac*building['phi'][idx[mode-1],:])), update=1, handles=han)
         iter += 1
 
-
-
+    return handle
+#
+#
 #ANIMDEF: Animar la deformada de la estructura
 #
 #   building: Estructura de datos (diccionario) que define al edificio.
@@ -200,17 +201,22 @@ def plotmode(building,mode=1,anim=0,Nframe = 100,fps = 30.):
 #   sol = response(building,input).
 #   u = sol['dis']
 def animdef(building,u,Nframe = 1,factor=1,dt=1./30,fps = 30.):
+
+    #Calcular alturas y definir algunas variables para facilitar el 
+    #codigo
     z = building['h'].cumsum()
     esp = building['esp']
     idx = building['modeorder']
 
+    #Entrar modo interactivo e inicializar deformada en cero
     pl.ion()
     pl.figure()
     han = plotdef(building,squeeze(array(factor*u[0,:])))
     pl.xlabel('Disp [m]')
     pl.ylabel('z [m]')
-    #pl.title('t = {0:.2f} [s]'.format(t[i]))
     pl.axis('equal')
+    
+    #Calcular fps y fskip si hay inconsistencias
     iter = 1
     fskip = ceil(dt*fps)
     if fskip < 1:
@@ -219,20 +225,18 @@ def animdef(building,u,Nframe = 1,factor=1,dt=1./30,fps = 30.):
         fskip = 1.
         fps = 1./dt
 
-
+    #Ciclo principal de animacion
     while iter < min(Nframe*fskip,Nframe):
         time.sleep(1./fps)
-        #ti = time.time()
         pl.title('t = {0:05.2f} s'.format(dt*iter))
         plotdef(building, squeeze(array(factor*u[iter,:])), update=1, handles=han)
         iter += fskip
-        #tf = time.time()
-        #if (tf-ti) > 1/fps:
-            #fskip = floor((tf-ti)*fps)
-
-
-
-
+    
+    #Salir de modo interactivo y cerrar ventana de animacion
+    pl.ioff()
+    pl.close(all)
+#
+#
 #PLOTDEF: Graficar la deformada estatica de la estructura (sin animar)
 #
 #   Sintaxis:
@@ -314,10 +318,8 @@ def plotdef(building,u,update=0,handles={},ax = -1):
         pl.draw()
     handles = dict(flrs=flr,cols=col)
     return handles
-
-
-
-
+#
+#
 # RESPONSE: Calcular solucion en el tiempo al problema definido.
 #
 #   building: Estructura de datos (diccionario) que define al edificio.
@@ -374,9 +376,8 @@ def response(building, input):
     sol['t'] = tout
 
     return sol
-
-
-
+#
+#
 # FLOORRESP: Graficar solucion en el tiempo para un piso en particular
 #
 # Sintaxis:
@@ -410,9 +411,8 @@ def floorresp(building,input,sol,floor):
     pl.xlabel('t [sec]')
 
     return h
-
-
-
+#
+#
 # ENVRESP: Graficar solucion envolvente para algun tipo de output
 #
 # Sintaxis:
@@ -469,13 +469,12 @@ def envresp(building,input,sol,type='acc'):
     handles['sp3'] = sp3
 
     return handles
-
-
-
+#
+#
 # FREQRESP: Graficar funcion de respuesta en frecuencia del sistema
 #
 # Sintaxis:
-#   freqresp(building,type=0,f0=0.,f1=10.,nfreq=200.,plottype = 'plot', plotthese = -1, axhan=-1)
+#   handle = freqresp(building,type=0,f0=0.,f1=10.,nfreq=200.,plottype = 'plot', plotthese = -1, axhan=-1)
 #
 #   building: Estructura de datos (diccionario) que define al edificio.
 #   type    : (int) que define el tipo de output buscado. Puede ser:
@@ -495,6 +494,8 @@ def envresp(building,input,sol,type='acc'):
 #              graficara.
 #   axhan   : Handle a la figura en el que se desea graficar. (se usa 
 #             al comparar funciones)
+#
+#  Devuelve handle a la figura generada.
 def freqresp(building,type=0,f0=0.,f1=10.,nfreq=200.,plottype = 'plot', plotthese = -1, axhan=-1):
 
     M = matrix(building['m'])
@@ -509,22 +510,16 @@ def freqresp(building,type=0,f0=0.,f1=10.,nfreq=200.,plottype = 'plot', plotthes
         w = omegas[i]
         U[:,i] = abs((1j*w)**type * linalg.solve(-w**2*M + (1j*w)*C + K, -M*r)).T
 
-    #freq = {}
-    #freq['f'] = omegas/(2*pi)
-    #freq['U'] = U
-    #return freq
-
     if plotthese == -1:
         plotthese = arange(building['nfloors'])
 
     if axhan==-1:
-        pl.figure()
+        handle = pl.figure()
         ax = pl.subplot(1,1,1)
     else:
         ax = axhan
 
     for i in plotthese:
-
         if plottype.lower() == 'loglog':
             ax.loglog(squeeze(omegas)/(2*pi), squeeze(U[i,:]), label='Piso {0:.0f}'.format(i))
         elif plottype.lower() == 'semilox':
@@ -544,9 +539,10 @@ def freqresp(building,type=0,f0=0.,f1=10.,nfreq=200.,plottype = 'plot', plotthes
         pl.ylabel('Velocidades')
     elif type == 2:
         pl.ylabel('Aceleraciones')
-
-
-
+    
+    return handle
+#
+#
 # COMPARE_BUILDINGS: Comparar datos dinamicos y funciones de respuesta 
 # en frecuencia para dos edificios.
 #
@@ -626,4 +622,3 @@ def compare_buildings(build1,build2,type=0,f0=0.,f1=20.,nfreq=200.,plottype = 'p
     handles['ax2'] = ax2
 
     return handles
-
