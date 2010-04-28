@@ -24,34 +24,49 @@ else:
 			raise
 			print >> sys.stderr, "ET imported from", ET.__file_
 from buildingtool import *
+from definitions import *
 
-class App(Frame):
-    def run_action(self):
-        building = {}
-        building['dx'] = float(self.dxEntry.get())     	# [m]
-        building['dy'] =  float(self.dyEntry.get())     # [m]
-        building['g'] = 9.806				# Gravitational Constant [m/s^2]
-        building['xsi'] = 5. 				# Modal damping  [%]
+class App(PanedWindow):
+    def prepare_action(self):
+        self.building = {}
+        self.building['dx'] = float(self.dxEntry.get())     	# [m]
+        self.building['dy'] =  float(self.dyEntry.get())     # [m]
+        self.building['g'] = 9.806				# Gravitational Constant [m/s^2]
+        self.building['xsi'] = 5. 				# Modal damping  [%]
 
-        building['h'] = zeros((len(self.buildings,)))       # Altura entrepiso [m]
-        building['E'] = zeros((len(self.buildings),))       # Modulo elasticidad piso [tonf/cm**2]
-        building['I'] = zeros((len(self.buildings),))       # Momento inercia columnas [m**4]
-        building['gamma'] = zeros((len(self.buildings),))   # Peso unitario losas [tonf/m**3]
-        building['esp'] = zeros((len(self.buildings),))     # espesor losas [m]
+        self.building['h'] = zeros((len(self.buildings,)))       # Altura entrepiso [m]
+        self.building['E'] = zeros((len(self.buildings),))       # Modulo elasticidad piso [tonf/cm**2]
+        self.building['I'] = zeros((len(self.buildings),))       # Momento inercia columnas [m**4]
+        self.building['gamma'] = zeros((len(self.buildings),))   # Peso unitario losas [tonf/m**3]
+        self.building['esp'] = zeros((len(self.buildings),))     # espesor losas [m]
 
         for i, item in enumerate(self.buildings):
             for key,value in item.iteritems():
-                building[key][i] = float(value)
+                self.building[key][i] = float(value)
         
-        building['name'] = self.buildingName
+        self.building['name'] = self.buildingName
 
-        building_sim(building)
-        #tkMessageBox.showinfo("Procesando", "Estamos procesando por usted...")
-
+        self.building = form(self.building)
+        
+        #Enable sim and plot tabs
+        self.actionsTabs.tab(1, state="normal")
+        self.actionsTabs.tab(2, state="normal")        
+        self.actionsTabs.tab(3, state="normal")
+    
+    def disabled_tabs(self):
+        self.actionsTabs.tab(1, state="disabled")
+        self.actionsTabs.tab(2, state="disabled")        
+        self.actionsTabs.tab(3, state="disabled")
+        self.actionsTabs.tab(4, state="disabled")
+        self.actionsTabs.tab(5, state="disabled")
+        self.actionsTabs.tab(6, state="disabled")
+    
     def add_floor(self):
         floor = {"h":self.hEntry.get(), "E":self.eEntry.get(), "I":self.iEntry.get(), "gamma":self.gammaEntry.get(), "esp":self.espEntry.get()}
         self.buildings.append(floor)
         self.update_floor_listbox()
+        #Disable sim and plot tabs
+        self.disabled_tabs()
 
     def edit_floor(self):
         items = map(int, self.floorListBox.curselection())
@@ -66,12 +81,14 @@ class App(Frame):
             self.gammaEntry.delete(0, END)
             self.gammaEntry.insert(0, b["gamma"])
             self.espEntry.delete(0, END)
-            self.espEntry.insert(0, b["esp"])
+            self.espEntry.insert(0, b["esp"])            
 
     def change_floor(self):
         items = map(int, self.floorListBox.curselection())
         if len(items) > 0:
             self.buildings[items[0]] = {"h":self.hEntry.get(), "E":self.eEntry.get(), "I":self.iEntry.get(), "gamma":self.gammaEntry.get(), "esp":self.espEntry.get()}
+            #Disable sim and plot tabs
+            self.disabled_tabs()
         self.update_floor_listbox()
 
     def delete_floor(self):
@@ -79,6 +96,8 @@ class App(Frame):
         for floor in items:
             self.buildings.remove(self.buildings[floor])
         self.update_floor_listbox()
+        #Disable sim and plot tabs
+        self.disabled_tabs()
 
     def update_floor_listbox(self):
         self.floorListBox.delete(0, END)
@@ -89,69 +108,123 @@ class App(Frame):
             self.floorListBox.insert(END, s)
 
     def prepare_to_building(self):
-        if self.buildingName:
-            self.buildings = []
-            
-            #Create Widgets            
-            Label(self, text="Edificio ", style="Title.TLabel").grid(row=0, column=0, padx=5, pady=5, sticky=NE)
-            self.nameLabel = Label(self, text=self.buildingName, style="Red.TLabel")
-            self.nameLabel.grid(row=0, column=1, padx=5, pady=5, sticky=NW)
+        self.buildings = []
+        if len(self.buildingName) != 0 and self.isCreated == False:
+            self.isCreated = True            
+            self.create_building_frame()
+            self.create_actions_frame()
+    
+    def create_building_frame(self):
+        currentRow = 0
+        #Create Widgets            
+        Label(self.frameLeft, text="Edificio ", style="Title.TLabel").grid(row=currentRow, column=0, padx=5, pady=5, sticky=NE)
+        self.nameLabel = Label(self.frameLeft, text=self.buildingName, style="Red.TLabel")
+        self.nameLabel.grid(row=currentRow, column=1, padx=5, pady=5, sticky=NW)
 
-            # Accion
-            self.runButton = Button(self, text="Calcular", command=self.run_action)
-            self.runButton.grid(row=0, column=3, columnspan=2, padx=10, pady=5)
+        # Base
+        currentRow += 1
+        Label(self.frameLeft, text="Base", style="Title.TLabel").grid(row=currentRow, column=0, columnspan=3, padx=5, pady=10)
+        currentRow += 1
+        Label(self.frameLeft, text="Largo [m]").grid(row=currentRow, column=0, padx=5, sticky=E)
+        self.dxEntry = Entry(self.frameLeft)
+        self.dxEntry.grid(row=currentRow, column=1, padx=3)
+        currentRow += 1
+        Label(self.frameLeft, text="Ancho [m]").grid(row=currentRow, column=0, padx=5, sticky=E)
+        self.dyEntry = Entry(self.frameLeft)
+        self.dyEntry.grid(row=3, column=1, padx=3)
+        
+        currentRow += 1
 
-            # Base
-            Label(self, text="Base", style="Title.TLabel").grid(row=1, column=0, columnspan=3, padx=5, pady=10)
-            Label(self, text="Largo [m]").grid(row=2, column=0, padx=5, sticky=E)
-            Label(self, text="Ancho [m]").grid(row=3, column=0, padx=5, sticky=E)
+        # Pisos
+        Label(self.frameLeft, text="Pisos", style="Title.TLabel").grid(row=currentRow, column=0, columnspan=3, padx=5, pady=5)
+        currentRow += 1
+        Label(self.frameLeft, text="Altura [m]").grid(row=currentRow, column=0, padx=5, sticky=E)
+        self.hEntry = Entry(self.frameLeft)
+        self.hEntry.grid(row=currentRow, column=1, padx=5)
+        
+        currentRow += 1
+        Label(self.frameLeft, text="Modulo Elasticidad [tonf/m^2]").grid(row=currentRow, column=0, padx=5, sticky=E)
+        self.eEntry = Entry(self.frameLeft)
+        self.eEntry.grid(row=currentRow, column=1, padx=5)
+        
+        currentRow += 1
+        Label(self.frameLeft, text="Momento Inercia [m^4]").grid(row=currentRow, column=0, padx=5, sticky=E)
+        self.iEntry = Entry(self.frameLeft)
+        self.iEntry.grid(row=currentRow, column=1, padx=5)
+        
+        currentRow += 1
+        Label(self.frameLeft, text="Peso Unitario Losa [tonf/m^3]").grid(row=currentRow, column=0, padx=5, sticky=E)
+        self.gammaEntry = Entry(self.frameLeft)
+        self.gammaEntry.grid(row=currentRow, column=1, padx=5)
+        
+        currentRow += 1
+        Label(self.frameLeft, text="Espesor [m]").grid(row=currentRow, column=0, padx=5, sticky=E)
+        self.espEntry = Entry(self.frameLeft)
+        self.espEntry.grid(row=currentRow, column=1, padx=5)
+                    
+        self.addFloorButton = Button(self.frameLeft, text="Agregar >>", command=self.add_floor, width=10)
+        self.addFloorButton.grid(row=6, column=2, rowspan=2, padx=5)
 
-            self.dxEntry = Entry(self)
-            self.dxEntry.grid(row=2, column=1, padx=3)
+        self.editFloorButton = Button(self.frameLeft, text="Cambiar", command=self.change_floor, width=10)
+        self.editFloorButton.grid(row=7, column=2, rowspan=2, padx=5)
 
-            self.dyEntry = Entry(self)
-            self.dyEntry.grid(row=3, column=1, padx=3)
+        self.floorListBox = Listbox(self.frameLeft, width=40)
+        self.floorListBox.grid(row=6, column=3, rowspan=4, columnspan=2, padx=10)
 
-            # Pisos
-            Label(self, text="Pisos", style="Title.TLabel").grid(row=4, column=0, columnspan=3, padx=5, pady=5)
-            Label(self, text="Altura [m]").grid(row=5, column=0, padx=5, sticky=E)
-            self.hEntry = Entry(self)
-            self.hEntry.grid(row=5, column=1, padx=5)
+        self.deleteFloorButton = Button(self.frameLeft, text="Editar", command=self.edit_floor, width=10)
+        self.deleteFloorButton.grid(row=10, column=3, padx=5)
 
-            Label(self, text="Modulo Elasticidad [tonf/m^2]").grid(row=6, column=0, padx=5, sticky=E)
-            self.eEntry = Entry(self)
-            self.eEntry.grid(row=6, column=1, padx=5)
+        self.deleteFloorButton = Button(self.frameLeft, text="Eliminar", command=self.delete_floor, width=10)
+        self.deleteFloorButton.grid(row=10, column=4, padx=5)
 
-            Label(self, text="Momento Inercia [m^4]").grid(row=7, column=0, padx=5, sticky=E)
-            self.iEntry = Entry(self)
-            self.iEntry.grid(row=7, column=1, padx=5)
+    def create_actions_frame(self):
+        self.actionsTabs = Notebook(self.frameRight)
+        self.actionsTabs.pack(fill=BOTH, expand=1)
+        self.create_prepare_action_frame()
+        self.create_sim_action_frame()
+        self.create_freqresp_action_frame()
+        self.create_compare_action_frame()
+        self.create_envresp_action_frame()
+        self.create_floorresp_action_frame()
+        self.create_animation_action_frame()
+    
+    def create_prepare_action_frame(self):
+        self.prepareFrame = Frame(self.actionsTabs)
+        self.actionsTabs.add(self.prepareFrame, text="Preparar")
+        
+        # Prepare Button
+        self.prepareButton = Button(self.prepareFrame, text="Preparar", command=self.prepare_action)
+        self.prepareButton.grid(row=0, column=0, padx=10, pady=10)
+        
+    def create_sim_action_frame(self):
+        self.simFrame = Frame(self.actionsTabs)
+        self.actionsTabs.add(self.simFrame, text="Simular", state="disabled")
+        
+    def create_freqresp_action_frame(self):
+        self.freqrespFrame = Frame(self.actionsTabs)
+        self.actionsTabs.add(self.freqrespFrame, text="Resp. a Frecuencia", state="disabled")
+        
+    def create_compare_action_frame(self):
+        self.compareFrame = Frame(self.actionsTabs)
+        self.actionsTabs.add(self.compareFrame, text="Comparar", state="disabled")
+    
+    def create_envresp_action_frame(self):
+        self.envrespFrame = Frame(self.actionsTabs)
+        self.actionsTabs.add(self.envrespFrame, text="Envolventes", state="disabled")   
 
-            Label(self, text="Peso Unitario Losa [tonf/m^3]").grid(row=8, column=0, padx=5, sticky=E)
-            self.gammaEntry = Entry(self)
-            self.gammaEntry.grid(row=8, column=1, padx=5)
-
-            Label(self, text="Espesor [m]").grid(row=9, column=0, padx=5, sticky=E)
-            self.espEntry = Entry(self)
-            self.espEntry.grid(row=9, column=1, padx=5)
-
-            self.addFloorButton = Button(self, text="Agregar >>", command=self.add_floor, width=10)
-            self.addFloorButton.grid(row=5, column=2, rowspan=2, padx=5)
-
-            self.editFloorButton = Button(self, text="Cambiar", command=self.change_floor, width=10)
-            self.editFloorButton.grid(row=6, column=2, rowspan=2, padx=5)
-
-            self.floorListBox = Listbox(self, width=40)
-            self.floorListBox.grid(row=5, column=3, rowspan=4, columnspan=2, padx=10)
-
-            self.deleteFloorButton = Button(self, text="Editar", command=self.edit_floor, width=10)
-            self.deleteFloorButton.grid(row=9, column=3, padx=5)
-
-            self.deleteFloorButton = Button(self, text="Eliminar", command=self.delete_floor, width=10)
-            self.deleteFloorButton.grid(row=9, column=4, padx=5)
-
+    def create_floorresp_action_frame(self):
+        self.floorrespFrame = Frame(self.actionsTabs)
+        self.actionsTabs.add(self.floorrespFrame, text="Pisos", state="disabled")   
+    
+    def create_animation_action_frame(self):
+        self.animationFrame = Frame(self.actionsTabs)
+        self.actionsTabs.add(self.animationFrame, text="Animacion", state="disabled")               
+    
     def prepare_new_building(self):
         self.buildingName = tkSimpleDialog.askstring("Ingreso", "Ingresa el nombre del Edificio:", parent=self)
         self.prepare_to_building()
+        #Disable sim and plot tabs
+        self.disabled_tabs()
 
     def load_building(self):
         filename = askopenfilename(title="Elige un archivo para abrir", initialdir=".", filetypes=[("Buildingsim File","*.bsim")])
@@ -160,6 +233,8 @@ class App(Frame):
         self.buildingName = root.get("name")        
         self.prepare_to_building()
         
+        self.nameLabel.config(text=self.buildingName)
+        
         self.dxEntry.insert(0, root.get("dx"))
         self.dyEntry.insert(0, root.get("dy"))
         
@@ -167,6 +242,9 @@ class App(Frame):
             floor = {"h":floorNode.get("h"), "E":floorNode.get("E"), "I":floorNode.get("I"), "gamma":floorNode.get("gamma"), "esp":floorNode.get("esp")}
             self.buildings.append(floor)
             self.update_floor_listbox()
+            
+        #Disable sim and plot tabs
+        self.disabled_tabs()
             
     def save_building(self):
         filename = asksaveasfilename(parent=self.master, title="Ingresa o selecciona el archivo donde guardar", filetypes=[("Buildingsim File","*.bsim")])
@@ -209,21 +287,31 @@ class App(Frame):
         self.menu.add_cascade(label="Edificio", menu=self.buildingMenu)
 
     def __init__(self, master):        
-        self.create_styles()
-        Frame.__init__(self, master, width=master.winfo_screenwidth(), height=master.winfo_screenheight()) # bg=self.mainBg
-        
-        master.config(bg="#003C6E")        
-        self.create_menu()
-        
-        self.grid(padx=20, pady=20,sticky=N+S+E+W)
+        PanedWindow.__init__(self, master, orient=HORIZONTAL, width=master.winfo_screenwidth(), height=master.winfo_screenheight())
+        #Create frames in paned window
+        self.grid(padx=20, pady=20, sticky=N+S+E+W)
         self.grid_propagate(0)
+        self.frameLeft = Frame(self, width=750)
+        self.frameRight = Frame(self)
+        self.add(self.frameLeft)
+        self.add(self.frameRight)
         
+        #Config master parameters
+        self.master.config(bg="#003C6E")        
         self.master.title("Calculadora de Comportamiento de Edificios")        
         
+        self.create_styles()
+        self.create_menu()
+        
+        #Display ING logo
         self.canvas = Canvas(width = 77, height = 98)        
         self.gifLogo = PhotoImage(file = 'imgs/ing.gif')
         self.canvas.create_image(0, 0, image = self.gifLogo, anchor = NW)
         self.canvas.grid(row=0, column=0, padx=0, pady=0, sticky=NW)
+        
+        #Init variables
+        self.buildingName = ""
+        self.isCreated = False
 
 #main
 root = Tk()
@@ -239,5 +327,6 @@ except:
 exeFileName = sys.argv[0]
 exeDirectory = os.path.dirname(exeFileName)
 os.chdir(exeDirectory)
+
 w = App(root)
 root.mainloop()
