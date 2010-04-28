@@ -227,7 +227,7 @@ class App(PanedWindow):
         self.disabled_tabs()
 
     def load_building(self):
-        filename = askopenfilename(title="Elige un archivo para abrir", initialdir=".", filetypes=[("Buildingsim File","*.bsim")])
+        filename = askopenfilename(title="Elige un archivo para abrir", initialdir=".", filetypes=[("BuildingSim File","*.bsim")])
         tree = ET.parse(filename)
         root = tree.getroot()
         self.buildingName = root.get("name")        

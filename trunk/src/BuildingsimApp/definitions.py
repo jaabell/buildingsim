@@ -5,6 +5,8 @@ from scipy import *
 from scipy import optimize, linalg, integrate, interpolate
 import pylab as pl
 import time
+import numpy as np
+
 #
 #No se usa
 def findperiod(k, beta, Dx, Dy, ex, ey, m0):
@@ -578,17 +580,8 @@ def envresp(building,input,sol,type='acc'):
 #  Devuelve handle a la figura generada.
 def freqresp(building,type=0,f0=0.,f1=10.,nfreq=200.,plottype = 'plot', plotthese = -1, axhan=-1):
 
-    M = matrix(building['m'])
-    C = building['c']
-    K = building['k']
-    r = matrix(building['rsis'])
-
-    omegas = arange(2*pi*f0,2*pi*f1,2*pi*(f1-f0)/nfreq)
-    U = zeros((building['nfloors'],nfreq))
-
-    for i in arange(nfreq):
-        w = omegas[i]
-        U[:,i] = abs((1j*w)**type * linalg.solve(-w**2*M + (1j*w)*C + K, -M*r)).T
+    omegas,Udum = transfun(building,type,f0,f1,nfreq)
+    U = abs(Udum)
 
     if plotthese == -1:
         plotthese = arange(building['nfloors'])
@@ -620,7 +613,25 @@ def freqresp(building,type=0,f0=0.,f1=10.,nfreq=200.,plottype = 'plot', plotthes
     elif type == 2:
         pl.ylabel('Aceleraciones')
     
-    return handle
+    return handle, U
+#
+#  TRANSFUN: Calcular funcion de transferencia.
+#
+# Misma entrada que freqresp, devuelve U.
+def transfun(building,type=0,f0=0.,f1=10.,nfreq=200.):
+    M = matrix(building['m'])
+    C = building['c']
+    K = building['k']
+    r = matrix(building['rsis'])
+
+    omegas = arange(2*pi*f0,2*pi*f1,2*pi*(f1-f0)/nfreq)
+    U = zeros((building['nfloors'],nfreq))
+
+    for i in arange(nfreq):
+        w = omegas[i]
+        U[:,i] = ((1j*w)**type * linalg.solve(-w**2*M + (1j*w)*C + K,
+        -M*r)).T
+    return omegas,U
 #
 #
 # COMPARE_BUILDINGS: Comparar datos dinamicos y funciones de respuesta 
@@ -702,3 +713,7 @@ def compare_buildings(build1,build2,type=0,f0=0.,f1=20.,nfreq=200.,plottype = 'p
     handles['ax2'] = ax2
 
     return handles
+#
+#
+def shiftplot(w,f):
+    pl.plot(np.fft.fftshift(w),np.fft.fftshift(f))
