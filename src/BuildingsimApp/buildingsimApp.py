@@ -35,7 +35,7 @@ class App(PanedWindow):
         self.building['g'] = 9.806				# Gravitational Constant [m/s^2]
         self.building['xsi'] = 5. 				# Modal damping  [%]
 
-        self.building['h'] = zeros((len(self.buildings,)))       # Altura entrepiso [m]
+        self.building['h'] = zeros((len(self.buildings),))       # Altura entrepiso [m]
         self.building['E'] = zeros((len(self.buildings),))       # Modulo elasticidad piso [tonf/cm**2]
         self.building['I'] = zeros((len(self.buildings),))       # Momento inercia columnas [m**4]
         self.building['gamma'] = zeros((len(self.buildings),))   # Peso unitario losas [tonf/m**3]
@@ -80,10 +80,42 @@ class App(PanedWindow):
         pl.show()
         
     def compare_buildings(self):
-        freqresp(self.building)
+        if len(self.compareFileEntry.get()) == 0:
+            tkMessageBox.showerror("Error", "Debes seleccionar un archivo con otro edificio para comparar")
+        else:
+            #Load and prepare other building
+            otherfilename = self.compareFileEntry.get()                        
+            otherbuilding = self.load_building_to_dictionary(otherfilename)
+            otherbuilding = form(otherbuilding)
+            
+            #Load parameters
+            variable = self.compareVariableCombobox.current()
+            if variable == -1:
+                variable = 0
+            
+            try:
+                f0 = float(self.compareF0Entry.get())
+            except:
+                f0 = 0.
+            try:
+                f1 = float(self.compareF1Entry.get())
+            except:
+                f1 = 10.
+            try:
+                nfreq = float(self.compareNfreqEntry.get())
+            except:
+                nfreq = 200.
+            if self.comparePlottypeCombobox.current() != -1:
+                plottype = self.plottypeDictionary[self.comparePlottypeCombobox.get()]
+            else:
+                plottype = "plot"
+            
+            handles = compare_buildings(self.building, otherbuilding, variable, f0, f1, nfreq, plottype)            
+            pl.show()
         
     def load_building_to_compare(self):
         filename = askopenfilename(title="Elige un archivo para el otro Edificio", initialdir=".", filetypes=[("BuildingSim File","*.bsim")])
+        self.compareFileEntry.insert(0, filename)
         
     def simulate(self):
         freqresp(self.building)
@@ -153,7 +185,7 @@ class App(PanedWindow):
         for item in self.buildings:
             s = ""
             for key,value in item.iteritems():
-                s = s + "[" + key + "=" + value + "]"
+                s = s + "[" + key + "=" + str(value) + "]"
             self.floorListBox.insert(END, s)
 
     def prepare_to_building(self):
@@ -292,18 +324,38 @@ class App(PanedWindow):
         self.compareFrame = Frame(self.actionsTabs)
         self.actionsTabs.add(self.compareFrame, text="Comparar", state="disabled")
         
-        Label(self.compareFrame, text="Comparar Edificaciones", style="Title.TLabel").grid(row=0, column=0, columnspan=3, padx=5, pady=5, sticky=N+S+W+E)
+        Label(self.compareFrame, text="Comparar Edificaciones", style="Title.TLabel").grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=N+S+W+E)
         
-        Label(self.compareFrame, text="Otro Edificio", style="Small.TLabel").grid(row=1, column=0, padx=5, sticky=E)        
-        self.compareFileBuilding = Entry(self.compareFrame)
-        self.compareFileBuilding.grid(row=1, column=1, padx=3, pady=5, sticky=W)
-        
+        Label(self.compareFrame, text="Otro Edificio").grid(row=1, column=0, columnspan=2, padx=5, sticky=N+S+W+E)        
+        self.compareFileEntry = Entry(self.compareFrame)
+        self.compareFileEntry.grid(row=2, column=0, padx=3, pady=5, sticky=W)        
         self.compareLoadFileButton = Button(self.compareFrame, text="Seleccionar Archivo", command=self.load_building_to_compare)
-        self.compareLoadFileButton.grid(row=1, column=2, padx=10, pady=10)
+        self.compareLoadFileButton.grid(row=2, column=1, padx=10, pady=10)
+        
+        Label(self.compareFrame, text="Parametros para Comparacion").grid(row=3, column=0, columnspan=2, padx=5, pady=5, sticky=N+S+W+E)        
+        Label(self.compareFrame, text="Variable de Salida", style="Small.TLabel").grid(row=4, column=0, padx=5, sticky=E)        
+        self.compareVariableCombobox = Combobox(self.compareFrame, values=("desplazamiento", "velocidad", "aceleracion"))
+        self.compareVariableCombobox.grid(row=4, column=1, padx=3, pady=5, sticky=W)
+        
+        Label(self.compareFrame, text="Frecuencia Minima", style="Small.TLabel").grid(row=5, column=0, padx=5, sticky=E)        
+        self.compareF0Entry = Entry(self.compareFrame)
+        self.compareF0Entry.grid(row=5, column=1, padx=3, pady=5, sticky=W)
+        
+        Label(self.compareFrame, text="Frecuencia Maxima", style="Small.TLabel").grid(row=6, column=0, padx=5, sticky=E)        
+        self.compareF1Entry = Entry(self.compareFrame)
+        self.compareF1Entry.grid(row=6, column=1, padx=3, pady=5, sticky=W)
+        
+        Label(self.compareFrame, text="Numero de Frecuencias", style="Small.TLabel").grid(row=7, column=0, padx=5, sticky=E)        
+        self.compareNfreqEntry = Entry(self.compareFrame)
+        self.compareNfreqEntry.grid(row=7, column=1, padx=3, pady=5, sticky=W)
+                
+        Label(self.compareFrame, text="Tipo de Funcion", style="Small.TLabel").grid(row=8, column=0, padx=5, sticky=E)        
+        self.comparePlottypeCombobox = Combobox(self.compareFrame, values=("simple", "logaritmico doble", "semilogaritmico en x", "semilogaritmico en y"))
+        self.comparePlottypeCombobox.grid(row=8, column=1, padx=3, pady=5, sticky=W)
         
         # Compare Button
         self.compareButton = Button(self.compareFrame, text="Comparar", command=self.compare_buildings)
-        self.compareButton.grid(row=5, column=0, padx=10, pady=10)
+        self.compareButton.grid(row=12, column=0, padx=10, pady=10)
     
     def create_envresp_action_frame(self):
         self.envrespFrame = Frame(self.actionsTabs)
@@ -340,23 +392,52 @@ class App(PanedWindow):
         self.prepare_to_building()
         #Disable sim and plot tabs
         self.disabled_tabs()
-
-    def load_building(self):
-        filename = askopenfilename(title="Elige un archivo para abrir", initialdir=".", filetypes=[("BuildingSim File","*.bsim")])
+    
+    def load_building_to_dictionary(self, filename):
         tree = ET.parse(filename)
         root = tree.getroot()
-        self.buildingName = root.get("name")        
+        
+        building = {}
+        building['name'] = root.get("name")
+        
+        building['dx'] = float(root.get("dx"))
+        building['dy'] =  float(root.get("dy"))
+        building['g'] = 9.806				# Gravitational Constant [m/s^2]
+        building['xsi'] = 5. 				# Modal damping  [%]        
+                
+        numfloors = sum(1 for floor in tree.getiterator("floor"))
+        
+        building['h'] = zeros((numfloors,))       # Altura entrepiso [m]
+        building['E'] = zeros((numfloors,))       # Modulo elasticidad piso [tonf/cm**2]
+        building['I'] = zeros((numfloors,))       # Momento inercia columnas [m**4]
+        building['gamma'] = zeros((numfloors,))   # Peso unitario losas [tonf/m**3]
+        building['esp'] = zeros((numfloors,))     # espesor losas [m]
+        
+        for i, floorNode in enumerate(tree.getiterator("floor")):
+            floor = {"h":floorNode.get("h"), "E":floorNode.get("E"), "I":floorNode.get("I"), "gamma":floorNode.get("gamma"), "esp":floorNode.get("esp")}
+            for key,value in floor.iteritems():
+                building[key][i] = float(value) 
+        
+        return building
+        
+    def load_building(self):
+        filename = askopenfilename(title="Elige un archivo para abrir", initialdir=".", filetypes=[("BuildingSim File","*.bsim")])
+        building = self.load_building_to_dictionary(filename)
+                
+        self.buildingName = building['name']
         self.prepare_to_building()
         
         self.nameLabel.config(text=self.buildingName)
         
-        self.dxEntry.insert(0, root.get("dx"))
-        self.dyEntry.insert(0, root.get("dy"))
+        self.dxEntry.insert(0, building['dx'])
+        self.dyEntry.insert(0, building['dy'])
         
-        for floorNode in tree.getiterator("floor"):
-            floor = {"h":floorNode.get("h"), "E":floorNode.get("E"), "I":floorNode.get("I"), "gamma":floorNode.get("gamma"), "esp":floorNode.get("esp")}
+        self.buildings = []
+        for i, value in enumerate(building['h']):            
+            floor = {"h":building["h"][i], "E":building["E"][i], "I":building["I"][i], "gamma":building["gamma"][i], "esp":building["esp"][i]}
             self.buildings.append(floor)
-            self.update_floor_listbox()
+            
+        self.update_floor_listbox()
             
         #Disable sim and plot tabs
         self.disabled_tabs()
@@ -375,7 +456,7 @@ class App(PanedWindow):
         for i, item in enumerate(self.buildings):
             floorNode = ET.SubElement(floorsListNode, "floor")
             for key,value in item.iteritems():
-                floorNode.set(key, value)
+                floorNode.set(key, str(value))
 
         tree = ET.ElementTree(buildingNode)
         tree.write(filename)

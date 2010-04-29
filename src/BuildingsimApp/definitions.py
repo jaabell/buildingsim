@@ -6,6 +6,7 @@ from scipy import optimize, linalg, integrate, interpolate
 import pylab as pl
 import time
 import numpy as np
+import sys
 
 #
 #No se usa
@@ -591,6 +592,7 @@ def freqresp(building,type=0,f0=0.,f1=10.,nfreq=200.,plottype = 'plot', plotthes
         ax = pl.subplot(1,1,1)
     else:
         ax = axhan
+        handle = pl.gcf()
 
     for i in plotthese:
         if plottype.lower() == 'loglog':
@@ -672,6 +674,7 @@ def compare_buildings(build1,build2,type=0,f0=0.,f1=20.,nfreq=200.,plottype = 'p
     print 'Weight  ={0:15.5f}{1:15.5f}'.format(build1['m'].sum()*build1['g'],build2['m'].sum()*build1['g'])
     print ''
     print 'Periods [s]'
+    sys.stdout.flush()
 
     for i in range(max(Nf1,Nf2)):
         if i > Nf1:
@@ -683,6 +686,7 @@ def compare_buildings(build1,build2,type=0,f0=0.,f1=20.,nfreq=200.,plottype = 'p
 
     print ''
     print 'Frequencies [Hz]'
+    sys.stdout.flush()
 
     for i in range(max(Nf1,Nf2)):
         if i > Nf1:
@@ -691,12 +695,14 @@ def compare_buildings(build1,build2,type=0,f0=0.,f1=20.,nfreq=200.,plottype = 'p
             print 'Mode{0:3.0f} ={1:15.7f}               '.format(i+1,1/build1['T'][build1['modeorder'][i]])
         else:
             print 'Mode{0:3.0f} ={1:15.7f}{2:15.7f}'.format(i+1,1/build1['T'][build1['modeorder'][i]],1/build2['T'][build2['modeorder'][i]])
+            
+    sys.stdout.flush()
 
     fig = pl.figure()
     ax1 = pl.subplot(1,2,1)
     freqresp(build1, axhan = ax1, type = type, f0 = f0, f1 = f1, nfreq = nfreq, plottype = plottype)
     pl.title(build1['name'])
-
+    
     ax2 = pl.subplot(1,2,2)
     freqresp(build2, axhan = ax2, type = type, f0 = f0, f1 = f1, nfreq = nfreq, plottype = plottype)
     pl.ylabel('')
