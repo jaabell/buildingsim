@@ -119,7 +119,7 @@ class App(PanedWindow):
         self.compareFileEntry.insert(0, filename)
         
     def simulate(self):
-        input = {}
+        self.siminput = {}
         try:
             tmax = float(self.simTmaxEntry.get())
         except:
@@ -130,7 +130,7 @@ class App(PanedWindow):
             dt = 0.01
         
         t = arange(0., tmax , dt)
-        input['t'] = t
+        self.siminput['t'] = t
         
         #TODO: parametrizar
         g = 9.806
@@ -142,27 +142,39 @@ class App(PanedWindow):
             inputType = self.simInputTypeCombobox.get()
             
         if inputType == "armonica":
-            input['ug'] = harmonic(t, a0)
+            self.siminput['ug'] = harmonic(t, a0)
         elif inputType == "rectangular":
-            input['ug'] = rectangular(t, a0)
+            self.siminput['ug'] = rectangular(t, a0)
         else: # TODO: Carga desde archivo .CSV
-            input['ug'] = rectangular(t, a0)
+            self.siminput['ug'] = rectangular(t, a0)
 
-        self.buildingSim = response(self.building, input)        
+        self.buildingSim = response(self.building, self.siminput)        
         
         #Enable animate and other plot tabs
         self.actionsTabs.tab(4, state="normal")
         self.actionsTabs.tab(5, state="normal")        
         self.actionsTabs.tab(6, state="normal")
+        #Fill parameters        
+        self.floorrespFloorCombobox.configure(values=arange(1,len(self.buildings)+1,1).tolist())
         
     def plot_envresp(self):
-        envresp(self.building)
+        if self.envrespVariableCombobox.current() == -1:
+            variable = "acc"
+        else:
+            variable = self.envrespvariableDictionary[self.envrespVariableCombobox.get()]            
+        envresp(self.building, self.siminput, self.buildingSim, variable)
+        pl.show()
         
     def plot_floorresp(self):
-        floorresp(self.building)
+        if self.floorrespFloorCombobox.current() > 0:
+            floornumber = int(self.floorrespFloorCombobox.get())
+            floorresp(self.building, self.siminput, self.buildingSim, floornumber)
+            pl.show()
+        else:
+            tkMessageBox.showerror("Error", "Debes elegir un piso")                    
         
     def animate_simulation(self):
-        floorresp(self.building)
+        animdef(self.building, self.buildingSim['dis'])
     
     def disabled_tabs(self):
         self.actionsTabs.tab(1, state="disabled")
@@ -303,7 +315,7 @@ class App(PanedWindow):
         self.prepareFrame = Frame(self.actionsTabs)
         self.actionsTabs.add(self.prepareFrame, text="Preparar")
         
-        Label(self.prepareFrame, text="Preparar Calculos Edificio", style="Title.TLabel").grid(row=0, column=0, padx=5, pady=5, sticky=N+S+W+E)
+        Label(self.prepareFrame, text="Preparar Calculos Edificio", style="Title.TLabel").grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=N+S+W+E)
         
         # Prepare Button
         self.prepareButton = Button(self.prepareFrame, text="Preparar", command=self.prepare_action)
@@ -313,7 +325,7 @@ class App(PanedWindow):
         self.simFrame = Frame(self.actionsTabs)
         self.actionsTabs.add(self.simFrame, text="Simular", state="disabled")
         
-        Label(self.simFrame, text="Simular", style="Title.TLabel").grid(row=0, column=0, padx=5, pady=5, sticky=N+S+W+E)
+        Label(self.simFrame, text="Simular", style="Title.TLabel").grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=N+S+W+E)
         
         Label(self.simFrame, text="Tiempo de Simulacion [s]", style="Small.TLabel").grid(row=1, column=0, padx=5, sticky=E)        
         self.simTmaxEntry = Entry(self.simFrame)
@@ -324,7 +336,7 @@ class App(PanedWindow):
         self.simDtEntry.grid(row=2, column=1, padx=3, pady=5, sticky=W)
         
         Label(self.simFrame, text="Tipo de Movimiento", style="Small.TLabel").grid(row=3, column=0, padx=5, sticky=E)        
-        self.simInputTypeCombobox = Combobox(self.simFrame, values=("armonica", "rectangular", "archivo .CSV"))
+        self.simInputTypeCombobox = Combobox(self.simFrame, values=("armonica", "rectangular"))
         self.simInputTypeCombobox.grid(row=3, column=1, padx=3, pady=5, sticky=W)
         
         # Plot Button
@@ -403,27 +415,36 @@ class App(PanedWindow):
         self.envrespFrame = Frame(self.actionsTabs)
         self.actionsTabs.add(self.envrespFrame, text="Envolventes", state="disabled")   
         
-        Label(self.envrespFrame, text="Grafico de Envolventes", style="Title.TLabel").grid(row=0, column=0, padx=5, pady=5, sticky=N+S+W+E)
+        Label(self.envrespFrame, text="Grafico de Envolventes", style="Title.TLabel").grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=N+S+W+E)
+        
+        self.envrespvariableDictionary = {"aceleracion":"acc", "velocidad":"vel", "desplazamiento":"dis"}
+        Label(self.envrespFrame, text="Variable de Salida", style="Small.TLabel").grid(row=1, column=0, padx=5, sticky=E)        
+        self.envrespVariableCombobox = Combobox(self.envrespFrame, values=("aceleracion", "velocidad", "desplazamiento"))
+        self.envrespVariableCombobox.grid(row=1, column=1, padx=3, pady=5, sticky=W)
         
         # Plot Button
         self.envrespButton = Button(self.envrespFrame, text="Graficar", command=self.plot_envresp)
-        self.envrespButton.grid(row=1, column=0, padx=10, pady=10)
+        self.envrespButton.grid(row=5, column=0, padx=10, pady=10)
 
     def create_floorresp_action_frame(self):
         self.floorrespFrame = Frame(self.actionsTabs)
         self.actionsTabs.add(self.floorrespFrame, text="Pisos", state="disabled")   
         
-        Label(self.floorrespFrame, text="Grafico Respuestas por Piso", style="Title.TLabel").grid(row=0, column=0, padx=5, pady=5, sticky=N+S+W+E)
+        Label(self.floorrespFrame, text="Grafico Respuestas por Piso", style="Title.TLabel").grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=N+S+W+E)
+        
+        Label(self.floorrespFrame, text="Piso", style="Small.TLabel").grid(row=1, column=0, padx=5, sticky=E)        
+        self.floorrespFloorCombobox = Combobox(self.floorrespFrame)
+        self.floorrespFloorCombobox.grid(row=1, column=1, padx=3, pady=5, sticky=W)
         
         # Plot Button
-        self.floorrespButton = Button(self.floorrespFrame, text="Graficar", command=self.plot_freqresp)
-        self.floorrespButton.grid(row=1, column=0, padx=10, pady=10)
+        self.floorrespButton = Button(self.floorrespFrame, text="Graficar", command=self.plot_floorresp)
+        self.floorrespButton.grid(row=8, column=0, padx=10, pady=10)
     
     def create_animation_action_frame(self):
         self.animationFrame = Frame(self.actionsTabs)
         self.actionsTabs.add(self.animationFrame, text="Animacion", state="disabled")               
         
-        Label(self.animationFrame, text="Visualizar Animacion de Simulacion", style="Title.TLabel").grid(row=0, column=0, padx=5, pady=5, sticky=N+S+W+E)
+        Label(self.animationFrame, text="Visualizar Animacion de Simulacion", style="Title.TLabel").grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=N+S+W+E)
         
         # Animation Button
         self.animationButton = Button(self.animationFrame, text="Animar", command=self.animate_simulation)
