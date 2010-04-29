@@ -723,7 +723,16 @@ def compare_buildings(build1,build2,type=0,f0=0.,f1=20.,nfreq=200.,plottype = 'p
     handles['ax2'] = ax2
 
     return handles
+def plotimput(input)
+    fig = pl.figure()
+    fig.set_figwidth(11)
+    fig.set_figheight(4)
+    pl.plot(input['t'],input['ug'])
+    pl.xlabel('t')
+    pl.ylabel('ug')
+    return fig
+
 #
-#
+# Funciones de utilidad (nula)
 def shiftplot(w,f):
     pl.plot(np.fft.fftshift(w),np.fft.fftshift(f))
