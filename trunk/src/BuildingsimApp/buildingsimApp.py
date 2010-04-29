@@ -417,9 +417,9 @@ class App(PanedWindow):
         
         Label(self.envrespFrame, text="Grafico de Envolventes", style="Title.TLabel").grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=N+S+W+E)
         
-        self.envrespvariableDictionary = {"aceleracion":"acc", "velocidad":"vel", "desplazamiento":"dis"}
+        self.envrespvariableDictionary = {"aceleracion":"acc", "velocidad":"vel", "desplazamiento":"dis", "deriva":"dri"}
         Label(self.envrespFrame, text="Variable de Salida", style="Small.TLabel").grid(row=1, column=0, padx=5, sticky=E)        
-        self.envrespVariableCombobox = Combobox(self.envrespFrame, values=("aceleracion", "velocidad", "desplazamiento"))
+        self.envrespVariableCombobox = Combobox(self.envrespFrame, values=("aceleracion", "velocidad", "desplazamiento", "deriva"))
         self.envrespVariableCombobox.grid(row=1, column=1, padx=3, pady=5, sticky=W)
         
         # Plot Button
