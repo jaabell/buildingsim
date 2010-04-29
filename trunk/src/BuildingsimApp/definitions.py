@@ -723,7 +723,10 @@ def compare_buildings(build1,build2,type=0,f0=0.,f1=20.,nfreq=200.,plottype = 'p
     handles['ax2'] = ax2
 
     return handles
-def plotimput(input)
+#
+# PLOTINPUT: Graficar un input
+#  Recibe un input.
+def plotinput(input):
     fig = pl.figure()
     fig.set_figwidth(11)
     fig.set_figheight(4)
