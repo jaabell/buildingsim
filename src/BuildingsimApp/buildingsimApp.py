@@ -23,6 +23,7 @@ else:
 			sys.stderr.write(msg)
 			raise
 			print >> sys.stderr, "ET imported from", ET.__file_
+
 from buildingtool import *
 from definitions import *
 
@@ -52,6 +53,54 @@ class App(PanedWindow):
         self.actionsTabs.tab(1, state="normal")
         self.actionsTabs.tab(2, state="normal")        
         self.actionsTabs.tab(3, state="normal")
+    
+    def plot_freqresp(self):
+        variable = self.freqrespVariableCombobox.current()
+        if variable == -1:
+            variable = 0
+        
+        try:
+            f0 = float(self.freqrespF0Entry.get())
+        except:
+            f0 = 0.
+        try:
+            f1 = float(self.freqrespF1Entry.get())
+        except:
+            f1 = 10.
+        try:
+            nfreq = float(self.freqrespNfreqEntry.get())
+        except:
+            nfreq = 200.
+        if self.freqrespPlottypeCombobox.current() != -1:
+            plottype = self.plottypeDictionary[self.freqrespPlottypeCombobox.get()]
+        else:
+            plottype = "plot"
+        
+        handle = freqresp(self.building, variable, f0, f1, nfreq, plottype)
+        pl.show()
+        
+    def compare_buildings(self):
+        freqresp(self.building)
+        
+    def load_building_to_compare(self):
+        filename = askopenfilename(title="Elige un archivo para el otro Edificio", initialdir=".", filetypes=[("BuildingSim File","*.bsim")])
+        
+    def simulate(self):
+        freqresp(self.building)
+        
+        #Enable animate and other plot tabs
+        self.actionsTabs.tab(4, state="normal")
+        self.actionsTabs.tab(5, state="normal")        
+        self.actionsTabs.tab(6, state="normal")
+        
+    def plot_envresp(self):
+        envresp(self.building)
+        
+    def plot_floorresp(self):
+        floorresp(self.building)
+        
+    def animate_simulation(self):
+        floorresp(self.building)
     
     def disabled_tabs(self):
         self.actionsTabs.tab(1, state="disabled")
@@ -192,33 +241,99 @@ class App(PanedWindow):
         self.prepareFrame = Frame(self.actionsTabs)
         self.actionsTabs.add(self.prepareFrame, text="Preparar")
         
+        Label(self.prepareFrame, text="Preparar Calculos Edificio", style="Title.TLabel").grid(row=0, column=0, padx=5, pady=5, sticky=N+S+W+E)
+        
         # Prepare Button
         self.prepareButton = Button(self.prepareFrame, text="Preparar", command=self.prepare_action)
-        self.prepareButton.grid(row=0, column=0, padx=10, pady=10)
+        self.prepareButton.grid(row=1, column=0, padx=10, pady=10)
         
     def create_sim_action_frame(self):
         self.simFrame = Frame(self.actionsTabs)
         self.actionsTabs.add(self.simFrame, text="Simular", state="disabled")
         
+        Label(self.simFrame, text="Simular", style="Title.TLabel").grid(row=0, column=0, padx=5, pady=5, sticky=N+S+W+E)
+        
+        # Plot Button
+        self.simButton = Button(self.simFrame, text="Simular", command=self.simulate)
+        self.simButton.grid(row=1, column=0, padx=10, pady=10)
+        
     def create_freqresp_action_frame(self):
         self.freqrespFrame = Frame(self.actionsTabs)
         self.actionsTabs.add(self.freqrespFrame, text="Resp. a Frecuencia", state="disabled")
         
+        Label(self.freqrespFrame, text="Grafico de Respuesta a Frecuencia", style="Title.TLabel").grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=N+S+W+E)
+        
+        Label(self.freqrespFrame, text="Variable de Salida", style="Small.TLabel").grid(row=1, column=0, padx=5, sticky=E)        
+        self.freqrespVariableCombobox = Combobox(self.freqrespFrame, values=("desplazamiento", "velocidad", "aceleracion"))
+        self.freqrespVariableCombobox.grid(row=1, column=1, padx=3, pady=5, sticky=W)
+        
+        Label(self.freqrespFrame, text="Frecuencia Minima", style="Small.TLabel").grid(row=2, column=0, padx=5, sticky=E)        
+        self.freqrespF0Entry = Entry(self.freqrespFrame)
+        self.freqrespF0Entry.grid(row=2, column=1, padx=3, pady=5, sticky=W)
+        
+        Label(self.freqrespFrame, text="Frecuencia Maxima", style="Small.TLabel").grid(row=3, column=0, padx=5, sticky=E)        
+        self.freqrespF1Entry = Entry(self.freqrespFrame)
+        self.freqrespF1Entry.grid(row=3, column=1, padx=3, pady=5, sticky=W)
+        
+        Label(self.freqrespFrame, text="Numero de Frecuencias", style="Small.TLabel").grid(row=4, column=0, padx=5, sticky=E)        
+        self.freqrespNfreqEntry = Entry(self.freqrespFrame)
+        self.freqrespNfreqEntry.grid(row=4, column=1, padx=3, pady=5, sticky=W)
+        
+        self.plottypeDictionary = {"simple":"plot", "logaritmico doble":"loglog", "semilogaritmico en x":"semilogx", "semilogaritmico en y":"semilogy"}
+        Label(self.freqrespFrame, text="Tipo de Funcion", style="Small.TLabel").grid(row=5, column=0, padx=5, sticky=E)        
+        self.freqrespPlottypeCombobox = Combobox(self.freqrespFrame, values=("simple", "logaritmico doble", "semilogaritmico en x", "semilogaritmico en y"))
+        self.freqrespPlottypeCombobox.grid(row=5, column=1, padx=3, pady=5, sticky=W)
+        
+        # Plot Button
+        self.freqrespButton = Button(self.freqrespFrame, text="Graficar", command=self.plot_freqresp)
+        self.freqrespButton.grid(row=8, column=0, padx=10, pady=10)
+        
     def create_compare_action_frame(self):
         self.compareFrame = Frame(self.actionsTabs)
         self.actionsTabs.add(self.compareFrame, text="Comparar", state="disabled")
+        
+        Label(self.compareFrame, text="Comparar Edificaciones", style="Title.TLabel").grid(row=0, column=0, columnspan=3, padx=5, pady=5, sticky=N+S+W+E)
+        
+        Label(self.compareFrame, text="Otro Edificio", style="Small.TLabel").grid(row=1, column=0, padx=5, sticky=E)        
+        self.compareFileBuilding = Entry(self.compareFrame)
+        self.compareFileBuilding.grid(row=1, column=1, padx=3, pady=5, sticky=W)
+        
+        self.compareLoadFileButton = Button(self.compareFrame, text="Seleccionar Archivo", command=self.load_building_to_compare)
+        self.compareLoadFileButton.grid(row=1, column=2, padx=10, pady=10)
+        
+        # Compare Button
+        self.compareButton = Button(self.compareFrame, text="Comparar", command=self.compare_buildings)
+        self.compareButton.grid(row=5, column=0, padx=10, pady=10)
     
     def create_envresp_action_frame(self):
         self.envrespFrame = Frame(self.actionsTabs)
         self.actionsTabs.add(self.envrespFrame, text="Envolventes", state="disabled")   
+        
+        Label(self.envrespFrame, text="Grafico de Envolventes", style="Title.TLabel").grid(row=0, column=0, padx=5, pady=5, sticky=N+S+W+E)
+        
+        # Plot Button
+        self.envrespButton = Button(self.envrespFrame, text="Graficar", command=self.plot_envresp)
+        self.envrespButton.grid(row=1, column=0, padx=10, pady=10)
 
     def create_floorresp_action_frame(self):
         self.floorrespFrame = Frame(self.actionsTabs)
         self.actionsTabs.add(self.floorrespFrame, text="Pisos", state="disabled")   
+        
+        Label(self.floorrespFrame, text="Grafico Respuestas por Piso", style="Title.TLabel").grid(row=0, column=0, padx=5, pady=5, sticky=N+S+W+E)
+        
+        # Plot Button
+        self.floorrespButton = Button(self.floorrespFrame, text="Graficar", command=self.plot_freqresp)
+        self.floorrespButton.grid(row=1, column=0, padx=10, pady=10)
     
     def create_animation_action_frame(self):
         self.animationFrame = Frame(self.actionsTabs)
         self.actionsTabs.add(self.animationFrame, text="Animacion", state="disabled")               
+        
+        Label(self.animationFrame, text="Visualizar Animacion de Simulacion", style="Title.TLabel").grid(row=0, column=0, padx=5, pady=5, sticky=N+S+W+E)
+        
+        # Animation Button
+        self.animationButton = Button(self.animationFrame, text="Animar", command=self.animate_simulation)
+        self.animationButton.grid(row=1, column=0, padx=10, pady=10)
     
     def prepare_new_building(self):
         self.buildingName = tkSimpleDialog.askstring("Ingreso", "Ingresa el nombre del Edificio:", parent=self)
@@ -272,6 +387,7 @@ class App(PanedWindow):
         style.configure("TLabel", font=("Verdana", 12))
         style.configure("Title.TLabel", font=("Verdana", 14))
         style.configure("Red.TLabel", font=("Verdana", 14), foreground="red")
+        style.configure("Small.TLabel", font=("Verdana", 10))
     
     def create_menu(self):
         self.menu = Menu(self)
