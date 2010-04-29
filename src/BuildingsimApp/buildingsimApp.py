@@ -26,6 +26,7 @@ else:
 
 from buildingtool import *
 from definitions import *
+from senales import *
 
 class App(PanedWindow):
     def prepare_action(self):
@@ -118,7 +119,36 @@ class App(PanedWindow):
         self.compareFileEntry.insert(0, filename)
         
     def simulate(self):
-        freqresp(self.building)
+        input = {}
+        try:
+            tmax = float(self.simTmaxEntry.get())
+        except:
+            tmax = 60
+        try:
+            dt = float(self.simDtEntry.get())
+        except:
+            dt = 0.01
+        
+        t = arange(0., tmax , dt)
+        input['t'] = t
+        
+        #TODO: parametrizar
+        g = 9.806
+        a0 = 0.4*g
+        
+        if self.simInputTypeCombobox.current() == -1:
+            inputType = "armonica"
+        else:
+            inputType = self.simInputTypeCombobox.get()
+            
+        if inputType == "armonica":
+            input['ug'] = harmonic(t, a0)
+        elif inputType == "rectangular":
+            input['ug'] = rectangular(t, a0)
+        else: # TODO: Carga desde archivo .CSV
+            input['ug'] = rectangular(t, a0)
+
+        self.buildingSim = response(self.building, input)        
         
         #Enable animate and other plot tabs
         self.actionsTabs.tab(4, state="normal")
@@ -285,9 +315,21 @@ class App(PanedWindow):
         
         Label(self.simFrame, text="Simular", style="Title.TLabel").grid(row=0, column=0, padx=5, pady=5, sticky=N+S+W+E)
         
+        Label(self.simFrame, text="Tiempo de Simulacion [s]", style="Small.TLabel").grid(row=1, column=0, padx=5, sticky=E)        
+        self.simTmaxEntry = Entry(self.simFrame)
+        self.simTmaxEntry.grid(row=1, column=1, padx=3, pady=5, sticky=W)
+        
+        Label(self.simFrame, text="Intervalo [s]", style="Small.TLabel").grid(row=2, column=0, padx=5, sticky=E)        
+        self.simDtEntry = Entry(self.simFrame)
+        self.simDtEntry.grid(row=2, column=1, padx=3, pady=5, sticky=W)
+        
+        Label(self.simFrame, text="Tipo de Movimiento", style="Small.TLabel").grid(row=3, column=0, padx=5, sticky=E)        
+        self.simInputTypeCombobox = Combobox(self.simFrame, values=("armonica", "rectangular", "archivo .CSV"))
+        self.simInputTypeCombobox.grid(row=3, column=1, padx=3, pady=5, sticky=W)
+        
         # Plot Button
         self.simButton = Button(self.simFrame, text="Simular", command=self.simulate)
-        self.simButton.grid(row=1, column=0, padx=10, pady=10)
+        self.simButton.grid(row=10, column=0, padx=10, pady=10)
         
     def create_freqresp_action_frame(self):
         self.freqrespFrame = Frame(self.actionsTabs)
