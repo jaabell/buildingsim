@@ -117,8 +117,8 @@ class App(PanedWindow):
     def load_building_to_compare(self):
         filename = askopenfilename(title="Elige un archivo para el otro Edificio", initialdir=".", filetypes=[("BuildingSim File","*.bsim")])
         self.compareFileEntry.insert(0, filename)
-        
-    def show_input(self):
+    
+    def create_input(self):
         siminput = {}
         try:
             tmax = float(self.simTmaxEntry.get())
@@ -147,40 +147,16 @@ class App(PanedWindow):
             siminput['ug'] = rectangular(t, a0)
         else: # TODO: Carga desde archivo .CSV
             siminput['ug'] = rectangular(t, a0)
-
+        
+        return siminput
+        
+    def show_input(self):
+        siminput = self.create_input()
         plotinput(siminput)
         pl.show()
         
     def simulate(self):
-        self.siminput = {}
-        try:
-            tmax = float(self.simTmaxEntry.get())
-        except:
-            tmax = 60
-        try:
-            dt = float(self.simDtEntry.get())
-        except:
-            dt = 0.01
-        
-        t = arange(0., tmax , dt)
-        self.siminput['t'] = t
-        
-        #TODO: parametrizar
-        g = 9.806
-        a0 = 0.4*g
-        
-        if self.simInputTypeCombobox.current() == -1:
-            inputType = "armonica"
-        else:
-            inputType = self.simInputTypeCombobox.get()
-            
-        if inputType == "armonica":
-            self.siminput['ug'] = harmonic(t, a0)
-        elif inputType == "rectangular":
-            self.siminput['ug'] = rectangular(t, a0)
-        else: # TODO: Carga desde archivo .CSV
-            self.siminput['ug'] = rectangular(t, a0)
-
+        self.siminput = self.create_input()
         self.buildingSim = response(self.building, self.siminput)        
         
         #Enable animate and other plot tabs
