@@ -594,13 +594,17 @@ def freqresp(building,type=0,f0=0.,f1=10.,nfreq=200.,plottype = 'plot', plotthes
 
     for i in plotthese:
         if plottype.lower() == 'loglog':
-            ax.loglog(squeeze(omegas)/(2*pi), squeeze(U[i,:]), label='Piso {0:.0f}'.format(i))
-        elif plottype.lower() == 'semilox':
-            ax.semilogx(squeeze(omegas)/(2*pi), squeeze(U[i,:]), label='Piso {0:.0f}'.format(i))
+            ax.loglog(squeeze(omegas)/(2*pi), squeeze(U[i,:]),
+            label='Piso {0:.0f}'.format(i+1))
+        elif plottype.lower() == 'semilogx':
+            ax.semilogx(squeeze(omegas)/(2*pi), squeeze(U[i,:]),
+            label='Piso {0:.0f}'.format(i+1))
         elif plottype.lower() == 'semilogy':
-            ax.semilogy(squeeze(omegas)/(2*pi), squeeze(U[i,:]), label='Piso {0:.0f}'.format(i))
+            ax.semilogy(squeeze(omegas)/(2*pi), squeeze(U[i,:]),
+            label='Piso {0:.0f}'.format(i+1))
         else:
-            ax.plot(squeeze(omegas)/(2*pi), squeeze(U[i,:]), label='Piso {0:.0f}'.format(i))
+            ax.plot(squeeze(omegas)/(2*pi), squeeze(U[i,:]),
+            label='Piso {0:.0f}'.format(i+1))
 
     handles, labels = ax.get_legend_handles_labels()
     ax.legend(handles, labels)

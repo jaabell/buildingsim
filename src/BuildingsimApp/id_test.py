@@ -33,7 +33,7 @@ dt = 0.01
 tmax = 60
 
 fmin = 0.
-fmax = 20.
+fmax = 30.
 timespan = 30.
 K = (fmax - fmin)/timespan
 
@@ -77,8 +77,8 @@ Ureal4 = array(abs(U[3,:])).squeeze()
 
 wfft = np.fft.fftfreq(Nt,dt)
 
-#pl.figure()
-#pl.plot(np.fft.fftshift(wfft)/2./pi,abs(np.fft.fftshift(Ug)))
+pl.figure()
+pl.plot(np.fft.fftshift(wfft)/2./pi,abs(np.fft.fftshift(Ug)))
 
 
 pl.figure()
