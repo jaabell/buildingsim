@@ -229,13 +229,17 @@ class App(PanedWindow):
             for key,value in item.iteritems():
                 s = s + "[" + key + "=" + str(value) + "]"
             self.floorListBox.insert(END, s)
-
+    
     def prepare_to_building(self):
         self.buildings = []
         if len(self.buildingName) != 0 and self.isCreated == False:
             self.isCreated = True            
             self.create_building_frame()
             self.create_actions_frame()
+        else:
+            self.dxEntry.delete(0, END)
+            self.dyEntry.delete(0, END)
+            self.floorListBox.delete(0, END)
     
     def create_building_frame(self):
         currentRow = 0
