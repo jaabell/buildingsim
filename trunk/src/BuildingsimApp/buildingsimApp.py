@@ -118,6 +118,39 @@ class App(PanedWindow):
         filename = askopenfilename(title="Elige un archivo para el otro Edificio", initialdir=".", filetypes=[("BuildingSim File","*.bsim")])
         self.compareFileEntry.insert(0, filename)
         
+    def show_input(self):
+        siminput = {}
+        try:
+            tmax = float(self.simTmaxEntry.get())
+        except:
+            tmax = 60
+        try:
+            dt = float(self.simDtEntry.get())
+        except:
+            dt = 0.01
+        
+        t = arange(0., tmax , dt)
+        siminput['t'] = t
+        
+        #TODO: parametrizar
+        g = 9.806
+        a0 = 0.4*g
+        
+        if self.simInputTypeCombobox.current() == -1:
+            inputType = "armonica"
+        else:
+            inputType = self.simInputTypeCombobox.get()
+            
+        if inputType == "armonica":
+            siminput['ug'] = harmonic(t, a0)
+        elif inputType == "rectangular":
+            siminput['ug'] = rectangular(t, a0)
+        else: # TODO: Carga desde archivo .CSV
+            siminput['ug'] = rectangular(t, a0)
+
+        plotinput(siminput)
+        pl.show()
+        
     def simulate(self):
         self.siminput = {}
         try:
@@ -342,6 +375,10 @@ class App(PanedWindow):
         Label(self.simFrame, text="Tipo de Movimiento", style="Small.TLabel").grid(row=3, column=0, padx=5, sticky=E)        
         self.simInputTypeCombobox = Combobox(self.simFrame, values=("armonica", "rectangular"))
         self.simInputTypeCombobox.grid(row=3, column=1, padx=3, pady=5, sticky=W)
+        
+        # View input Button
+        self.simShowInputButton = Button(self.simFrame, text="Ver Movimiento", command=self.show_input)
+        self.simShowInputButton.grid(row=9, column=1, padx=10, pady=10)
         
         # Plot Button
         self.simButton = Button(self.simFrame, text="Simular", command=self.simulate)
