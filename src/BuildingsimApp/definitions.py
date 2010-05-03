@@ -107,7 +107,6 @@ def form(building,geom_eff=0):
     for i in range(nfloors):
         if i == (nfloors - 1):
             k[i,i] = kcol[i]
-
         else:
             k[i,i] = kcol[i] + kcol[i+1]
             k[i,i+1] = -kcol[i+1]
@@ -237,7 +236,7 @@ def animdef(building,u,Nframe = 1,factor=1,dt=1./30,fps = 30.):
     
     #Salir de modo interactivo y cerrar ventana de animacion
     pl.ioff()
-    pl.close(all)
+    #pl.close(all)
 #
 #
 #PLOTDEF: Graficar la deformada estatica de la estructura (sin animar)
@@ -635,8 +634,7 @@ def transfun(building,type=0,f0=0.,f1=10.,nfreq=200.):
 
     for i in arange(nfreq):
         w = omegas[i]
-        U[:,i] = ((1j*w)**type * linalg.solve(-w**2*M + (1j*w)*C + K,
-        -M*r)).T
+        U[:,i] = ((1j*w)**type * linalg.solve(-w**2*M + (1j*w)*C + K,-M*r)).T
     return omegas,U
 #
 #
@@ -677,9 +675,9 @@ def compare_buildings(build1,build2,type=0,f0=0.,f1=20.,nfreq=200.,plottype = 'p
     sys.stdout.flush()
 
     for i in range(max(Nf1,Nf2)):
-        if i > Nf1:
+        if i+1 > Nf1:
             print 'Mode{0:3.0f} =               {1:15.7f}'.format(i+1,build2['T'][build2['modeorder'][i]])
-        elif i > Nf2:
+        elif i+1 > Nf2:
             print 'Mode{0:3.0f} ={1:15.7f}               '.format(i+1,build1['T'][build1['modeorder'][i]])
         else:
             print 'Mode{0:3.0f} ={1:15.7f}{2:15.7f}'.format(i+1,build1['T'][build1['modeorder'][i]],build2['T'][build2['modeorder'][i]])
@@ -689,9 +687,9 @@ def compare_buildings(build1,build2,type=0,f0=0.,f1=20.,nfreq=200.,plottype = 'p
     sys.stdout.flush()
 
     for i in range(max(Nf1,Nf2)):
-        if i > Nf1:
+        if i+1 > Nf1:
             print 'Mode{0:3.0f} =               {1:15.7f}'.format(i+1,1/build2['T'][build2['modeorder'][i]])
-        elif i > Nf2:
+        elif i+1 > Nf2:
             print 'Mode{0:3.0f} ={1:15.7f}               '.format(i+1,1/build1['T'][build1['modeorder'][i]])
         else:
             print 'Mode{0:3.0f} ={1:15.7f}{2:15.7f}'.format(i+1,1/build1['T'][build1['modeorder'][i]],1/build2['T'][build2['modeorder'][i]])
