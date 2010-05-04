@@ -47,8 +47,8 @@ class App(PanedWindow):
                 self.building[key][i] = float(value)
         
         self.building['name'] = self.buildingName
-
-        self.building = form(self.building)
+                
+        self.building = form(self.building, self.geomEff.get())
         
         #Enable sim and plot tabs
         self.actionsTabs.tab(1, state="normal")
@@ -330,9 +330,13 @@ class App(PanedWindow):
         
         Label(self.prepareFrame, text="Preparar Calculos Edificio", style="Title.TLabel").grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=N+S+W+E)
         
+        self.geomEff = IntVar()
+        self.geomEffCheckbox = Checkbutton(self.prepareFrame, text="Incluir efectos de 2do orden", variable=self.geomEff)
+        self.geomEffCheckbox.grid(row=1, column=0, columnspan=2, padx=3, pady=5, sticky=W)
+        
         # Prepare Button
         self.prepareButton = Button(self.prepareFrame, text="Preparar", command=self.prepare_action)
-        self.prepareButton.grid(row=1, column=0, padx=10, pady=10)
+        self.prepareButton.grid(row=3, column=0, padx=10, pady=10)
         
     def create_sim_action_frame(self):
         self.simFrame = Frame(self.actionsTabs)
