@@ -2,6 +2,7 @@
 
 from Tkinter import *
 import tkSimpleDialog
+import tkMessageBox
 from tkFileDialog import askopenfilename
 from tkFileDialog import asksaveasfilename
 from ttk import *
@@ -54,6 +55,10 @@ class App(PanedWindow):
         self.actionsTabs.tab(1, state="normal")
         self.actionsTabs.tab(2, state="normal")        
         self.actionsTabs.tab(3, state="normal")
+        self.actionsTabs.tab(4, state="normal")
+        
+        #Fill parameters        
+        self.plotmodeModeCombobox.configure(values=arange(1,len(self.buildings)+1,1).tolist())
     
     def plot_freqresp(self):
         variable = self.freqrespVariableCombobox.current()
@@ -79,6 +84,14 @@ class App(PanedWindow):
         
         handle = freqresp(self.building, variable, f0, f1, nfreq, plottype)
         pl.show()
+        
+    def plot_plotmode(self):        
+        if self.plotmodeModeCombobox.current() >= 0:
+            mode = int(self.plotmodeModeCombobox.get())
+            plotmode(self.building, mode)
+            pl.show()
+        else:
+            tkMessageBox.showerror("Error", "Debes elegir un modo")    
         
     def compare_buildings(self):
         if len(self.compareFileEntry.get()) == 0:
@@ -175,7 +188,7 @@ class App(PanedWindow):
         pl.show()
         
     def plot_floorresp(self):
-        if self.floorrespFloorCombobox.current() > 0:
+        if self.floorrespFloorCombobox.current() >= 0:
             floornumber = int(self.floorrespFloorCombobox.get())
             floorresp(self.building, self.siminput, self.buildingSim, floornumber)
             pl.show()
@@ -317,9 +330,10 @@ class App(PanedWindow):
         self.actionsTabs = Notebook(self.frameRight)
         self.actionsTabs.pack(fill=BOTH, expand=1)
         self.create_prepare_action_frame()
-        self.create_sim_action_frame()
         self.create_freqresp_action_frame()
+        self.create_plotmode_action_frame()                
         self.create_compare_action_frame()
+        self.create_sim_action_frame()
         self.create_envresp_action_frame()
         self.create_floorresp_action_frame()
         self.create_animation_action_frame()
@@ -394,6 +408,20 @@ class App(PanedWindow):
         # Plot Button
         self.freqrespButton = Button(self.freqrespFrame, text="Graficar", command=self.plot_freqresp)
         self.freqrespButton.grid(row=8, column=0, padx=10, pady=10)
+        
+    def create_plotmode_action_frame(self):
+        self.plotmodeFrame = Frame(self.actionsTabs)
+        self.actionsTabs.add(self.plotmodeFrame, text="Modos", state="disabled")   
+        
+        Label(self.plotmodeFrame, text="Grafico Respuestas en Frecuencia", style="Title.TLabel").grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=N+S+W+E)
+        
+        Label(self.plotmodeFrame, text="Modo", style="Small.TLabel").grid(row=1, column=0, padx=5, sticky=E)        
+        self.plotmodeModeCombobox = Combobox(self.plotmodeFrame)
+        self.plotmodeModeCombobox.grid(row=1, column=1, padx=3, pady=5, sticky=W)
+        
+        # Plot Button
+        self.plotmodeButton = Button(self.plotmodeFrame, text="Graficar", command=self.plot_plotmode)
+        self.plotmodeButton.grid(row=8, column=0, padx=10, pady=10)
         
     def create_compare_action_frame(self):
         self.compareFrame = Frame(self.actionsTabs)
