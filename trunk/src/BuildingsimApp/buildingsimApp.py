@@ -145,21 +145,61 @@ class App(PanedWindow):
         t = arange(0., tmax , dt)
         siminput['t'] = t
         
-        #TODO: parametrizar
-        g = 9.806
-        a0 = 0.4*g
-        
         if self.simInputTypeCombobox.current() == -1:
             inputType = "armonica"
         else:
             inputType = self.simInputTypeCombobox.get()
             
         if inputType == "armonica":
-            siminput['ug'] = harmonic(t, a0)
+            try:
+                a = float(self.inputHarmonicAEntry.get())
+            except:
+                a = 9.806
+            try:
+                f = float(self.inputHarmonicFEntry.get())
+            except:
+                f = 1
+            try:
+                b = float(self.inputHarmonicBEntry.get())
+            except:
+                b = 0
+            try:
+                K = float(self.inputHarmonicKEntry.get())
+            except:
+                K = 0.
+            try:
+                tmin = float(self.inputHarmonicTminEntry.get())
+            except:
+                tmin = 0.
+            try:
+                tmax = float(self.inputHarmonicTmaxEntry.get())
+            except:
+                tmax = Inf
+            siminput['ug'] = harmonic(t, a, f, b, K, tmin, tmax)
         elif inputType == "rectangular":
-            siminput['ug'] = rectangular(t, a0)
+            try:
+                a = float(self.inputRectangularAEntry.get())
+            except:
+                a = 9.806
+            try:
+                t0 = float(self.inputRectangularT0Entry.get())
+            except:
+                t0 = 1
+            try:
+                f = float(self.inputRectangularFEntry.get())
+            except:
+                f = 1
+            try:
+                tmin = float(self.inputRectangularTminEntry.get())
+            except:
+                tmin = 0.
+            try:
+                tmax = float(self.inputRectangularTmaxEntry.get())
+            except:
+                tmax = Inf
+            siminput['ug'] = rectangular(t, a, t0, f, tmin, tmax)
         else: # TODO: Carga desde archivo .CSV
-            siminput['ug'] = rectangular(t, a0)
+            siminput['ug'] = rectangular(t, 9.806)
         
         return siminput
         
@@ -173,9 +213,9 @@ class App(PanedWindow):
         self.buildingSim = response(self.building, self.siminput)        
         
         #Enable animate and other plot tabs
-        self.actionsTabs.tab(4, state="normal")
-        self.actionsTabs.tab(5, state="normal")        
-        self.actionsTabs.tab(6, state="normal")
+        self.actionsTabs.tab(5, state="normal")
+        self.actionsTabs.tab(6, state="normal")        
+        self.actionsTabs.tab(7, state="normal")
         #Fill parameters        
         self.floorrespFloorCombobox.configure(values=arange(1,len(self.buildings)+1,1).tolist())
         
@@ -251,6 +291,17 @@ class App(PanedWindow):
             for key,value in item.iteritems():
                 s = s + "[" + key + "=" + str(value) + "]"
             self.floorListBox.insert(END, s)
+    
+    def sim_input_type_change(self, event):
+        inputType = self.simInputTypeCombobox.get()
+        self.inputHarmonicFrame.grid_forget()
+        self.inputRectangularFrame.grid_forget()
+        if inputType == "armonica":
+            self.inputHarmonicFrame.grid(row=4, column=0, columnspan=2, padx=3, pady=5, sticky=W)
+        elif inputType == "rectangular":
+            self.inputRectangularFrame.grid(row=4, column=0, columnspan=2, padx=3, pady=5, sticky=W)
+        else: # TODO: Carga desde archivo .CSV
+            print "other"
     
     def prepare_to_building(self):
         self.buildings = []
@@ -369,6 +420,7 @@ class App(PanedWindow):
         Label(self.simFrame, text="Tipo de Movimiento", style="Small.TLabel").grid(row=3, column=0, padx=5, sticky=E)        
         self.simInputTypeCombobox = Combobox(self.simFrame, values=("armonica", "rectangular"))
         self.simInputTypeCombobox.grid(row=3, column=1, padx=3, pady=5, sticky=W)
+        self.simInputTypeCombobox.bind('<<ComboboxSelected>>', self.sim_input_type_change)
         
         # View input Button
         self.simShowInputButton = Button(self.simFrame, text="Ver Movimiento", command=self.show_input)
@@ -377,6 +429,59 @@ class App(PanedWindow):
         # Plot Button
         self.simButton = Button(self.simFrame, text="Simular", command=self.simulate)
         self.simButton.grid(row=10, column=0, padx=10, pady=10)
+        
+        # Create frames for different inputs
+        # Harmonic
+        self.inputHarmonicFrame = Frame(self.simFrame)
+        Label(self.inputHarmonicFrame, text="Parametros Armonico", style="Small.TLabel").grid(row=0, column=0, padx=5, sticky=W+E+N+S)
+        
+        Label(self.inputHarmonicFrame, text="Amplitud A [m/s^2]", style="VerySmall.TLabel").grid(row=1, column=0, padx=5, sticky=E)        
+        self.inputHarmonicAEntry = Entry(self.inputHarmonicFrame)
+        self.inputHarmonicAEntry.grid(row=1, column=1, padx=3, pady=5, sticky=W)
+        
+        Label(self.inputHarmonicFrame, text="Frecuencia [Hz]", style="VerySmall.TLabel").grid(row=2, column=0, padx=5, sticky=E)        
+        self.inputHarmonicFEntry = Entry(self.inputHarmonicFrame)
+        self.inputHarmonicFEntry.grid(row=2, column=1, padx=3, pady=5, sticky=W)
+        
+        Label(self.inputHarmonicFrame, text="Amplitud B [m/s^2]", style="VerySmall.TLabel").grid(row=3, column=0, padx=5, sticky=E)        
+        self.inputHarmonicBEntry = Entry(self.inputHarmonicFrame)
+        self.inputHarmonicBEntry.grid(row=3, column=1, padx=3, pady=5, sticky=W)
+        
+        Label(self.inputHarmonicFrame, text="Tasa Crecimiento Frecuencia [Hz/s]", style="VerySmall.TLabel").grid(row=4, column=0, padx=5, sticky=E)        
+        self.inputHarmonicKEntry = Entry(self.inputHarmonicFrame)
+        self.inputHarmonicKEntry.grid(row=4, column=1, padx=3, pady=5, sticky=W)
+        
+        Label(self.inputHarmonicFrame, text="Tiempo Inicio [s]", style="VerySmall.TLabel").grid(row=5, column=0, padx=5, sticky=E)        
+        self.inputHarmonicTminEntry = Entry(self.inputHarmonicFrame)
+        self.inputHarmonicTminEntry.grid(row=5, column=1, padx=3, pady=5, sticky=W)
+        
+        Label(self.inputHarmonicFrame, text="Tiempo Final [s]", style="VerySmall.TLabel").grid(row=6, column=0, padx=5, sticky=E)        
+        self.inputHarmonicTmaxEntry = Entry(self.inputHarmonicFrame)
+        self.inputHarmonicTmaxEntry.grid(row=6, column=1, padx=3, pady=5, sticky=W)
+        
+        # Rectangular
+        self.inputRectangularFrame = Frame(self.simFrame)
+        Label(self.inputRectangularFrame, text="Parametros Rectangular", style="Small.TLabel").grid(row=0, column=0, padx=5, sticky=W+E+N+S)
+        
+        Label(self.inputRectangularFrame, text="Amplitud Aceleracion [m/s^2]", style="VerySmall.TLabel").grid(row=1, column=0, padx=5, sticky=E)        
+        self.inputRectangularAEntry = Entry(self.inputRectangularFrame)
+        self.inputRectangularAEntry.grid(row=1, column=1, padx=3, pady=5, sticky=W)
+        
+        Label(self.inputRectangularFrame, text="Frecuencia [Hz]", style="VerySmall.TLabel").grid(row=2, column=0, padx=5, sticky=E)        
+        self.inputRectangularFEntry = Entry(self.inputRectangularFrame)
+        self.inputRectangularFEntry.grid(row=2, column=1, padx=3, pady=5, sticky=W)
+        
+        Label(self.inputRectangularFrame, text="Desfase [s]", style="VerySmall.TLabel").grid(row=3, column=0, padx=5, sticky=E)        
+        self.inputRectangularT0Entry = Entry(self.inputRectangularFrame)
+        self.inputRectangularT0Entry.grid(row=3, column=1, padx=3, pady=5, sticky=W)
+        
+        Label(self.inputRectangularFrame, text="Tiempo Inicio [s]", style="VerySmall.TLabel").grid(row=4, column=0, padx=5, sticky=E)        
+        self.inputRectangularTminEntry = Entry(self.inputRectangularFrame)
+        self.inputRectangularTminEntry.grid(row=4, column=1, padx=3, pady=5, sticky=W)
+        
+        Label(self.inputRectangularFrame, text="Tiempo Final [s]", style="VerySmall.TLabel").grid(row=5, column=0, padx=5, sticky=E)        
+        self.inputRectangularTmaxEntry = Entry(self.inputRectangularFrame)
+        self.inputRectangularTmaxEntry.grid(row=5, column=1, padx=3, pady=5, sticky=W)
         
     def create_freqresp_action_frame(self):
         self.freqrespFrame = Frame(self.actionsTabs)
@@ -581,6 +686,7 @@ class App(PanedWindow):
         style.configure("Title.TLabel", font=("Verdana", 14))
         style.configure("Red.TLabel", font=("Verdana", 14), foreground="red")
         style.configure("Small.TLabel", font=("Verdana", 10))
+        style.configure("VerySmall.TLabel", font=("Verdana", 9))
     
     def create_menu(self):
         self.menu = Menu(self)
