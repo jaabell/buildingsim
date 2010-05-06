@@ -7,22 +7,7 @@ from definitions import *
 
 
 #columnas rectangulares
-c1 = 30./100.                       # [m]
-c2 = 30./100.                       # [m]
-I0 = c1*(c2**3)/12.                 # [m**4]
-
-# Global system parameters
-building = {}
-building['dx'] = 10.                                # [m]
-building['dy'] =  6.                                # [m]
-building['g'] = 9.806                               # Gravitational Constant [m/s^2]
-building['xsi'] = 5.                                # Modal damping  [%]
-building['h'] = array([2.7, 2.7, 2.7, 2.7])         # Altura entrepiso [m]
-building['E'] = array([230., 230., 230., 230.])     # Modulo elasticidad piso [tonf/cm**2]
-building['I'] = array([I0, I0, I0, I0]) * (100**2)  # Momento inercia columnas [m**4]
-building['gamma'] = array([2.5, 2.5, 2.5, 2.5])     # Peso unitario losas [tonf/m**3]
-building['esp'] = array([0.15, 0.15, 0.10, 0.10])   # espesor losas [m]
-building['cadd'] = array([])
+building = load_building('ejemplo8pisos.bsim')
 
 g = 9.806
 
@@ -64,12 +49,27 @@ building = form(building)
 #building1 = form(building1,geom_eff=0)
 #building2 = form(building2,geom_eff=1)
 
+f0 = 0
+f1 = 50
+nfreq = 200
+type = 0.
+
+M = matrix(building['m'])
+C = building['c']
+K = building['k']
+r = matrix(building['rsis'])
+omegas = arange(2*pi*f0,2*pi*f1,2*pi*(f1-f0)/nfreq)
+U = pl.complex128(zeros((building['nfloors'],nfreq)))
+
+for i in arange(nfreq):
+    w = omegas[i]
+    U[:,i] = ((1j*w)**type * linalg.solve(-w**2*M + (1j*w)*C + K,-M*r)).T
 
 
 #han = compare_buildings(building1,building2,plottype='semilogy',type=2)
 #pl.ion()
 #pl.show()
-sol = response(building,input)
+#sol = response(building,input)
 
 
 #animdef(building,sol['dis'],Nframe=nt,factor=50,dt=dt,fps=2/dt)
@@ -84,9 +84,9 @@ sol = response(building,input)
 
 ###Plot outputs
 #
-han = envresp(building,input,sol,type='dri')
-pl.ion()
-pl.show()
+#han = envresp(building,input,sol,type='dri')
+#pl.ion()
+#pl.show()
 #envresp(building,input,sol,'dis')
 
 #freqresp(building,0.,0.,20.,100.,'semilogx')
