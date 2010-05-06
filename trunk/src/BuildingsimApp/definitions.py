@@ -60,7 +60,7 @@ def blkdiag(*args):
 #
 # FORM: Inicializa la estructura.
 #
-# Sintaxis: building = form(building)
+# Sintaxis: building, isstable = form(building)
 # building: Estructura de datos (diccionario) que define al edificio.
 #
 # Building debe tener definidos los campos:
@@ -78,7 +78,8 @@ def blkdiag(*args):
 # Todos los valores son positivos.
 #
 # Form devuelve el mismo building con mas campos definidos (matrices 
-# del sistema, etc.)
+# del sistema, etc.) y un flag 'isstable' que indica si el sistema
+# es estable (isstable == 1 => edificio estable).
 def form(building,geom_eff=0):
     
 
@@ -149,8 +150,12 @@ def form(building,geom_eff=0):
     building['rsis'] = ones((nfloors,1)) #Seismic input matrix
     if geom_eff==1:
         building['P'] = P
-
-    return building
+    isstable = 1
+    if any(iscomplex(T)):
+        isstable = 0
+    if any(T<=0):
+        isstable = 0
+    return building, isstable
 #
 #
 # PLOTMODE: Graficar forma modal
