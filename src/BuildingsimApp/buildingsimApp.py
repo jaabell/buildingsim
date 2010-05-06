@@ -73,16 +73,19 @@ class App(PanedWindow):
         
         self.building['name'] = self.buildingName
                 
-        self.building = form(self.building, self.geomEff.get())
+        self.building, isstable = form(self.building, self.geomEff.get())
         
-        #Enable sim and plot tabs
-        self.actionsTabs.tab(1, state="normal")
-        self.actionsTabs.tab(2, state="normal")        
-        self.actionsTabs.tab(3, state="normal")
-        self.actionsTabs.tab(4, state="normal")
-        
-        #Fill parameters        
-        self.plotmodeModeCombobox.configure(values=arange(1,len(self.buildings)+1,1).tolist())
+        if isstable != 0:
+            #Enable sim and plot tabs
+            self.actionsTabs.tab(1, state="normal")
+            self.actionsTabs.tab(2, state="normal")        
+            self.actionsTabs.tab(3, state="normal")
+            self.actionsTabs.tab(4, state="normal")
+            
+            #Fill parameters        
+            self.plotmodeModeCombobox.configure(values=arange(1,len(self.buildings)+1,1).tolist())
+        else:
+            tkMessageBox.showerror("Error", "Tu Edificio colapso, no es posible realizar mas calculos con el")
     
     def plot_freqresp(self):
         variable = self.freqrespVariableCombobox.current()
