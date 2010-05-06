@@ -7,6 +7,7 @@ import pylab as pl
 import time
 import numpy as np
 import sys
+import xml.etree.cElementTree as ET
 
 #
 #No se usa
@@ -177,7 +178,7 @@ def plotmode(building,mode=1,anim=0,Nframe = 100,fps = 30.):
     handle = pl.figure()
     iter = 0
     fac = factor*cos(2*pi*iter/(2*fps))
-    han = plotdef(building,squeeze(array(fac*building['phi'][idx[mode-1],:])))
+    han = plotdef(building,squeeze(array(fac*building['phi'][:,idx[mode-1]])))
     pl.xlabel('Disp [m]')
     pl.ylabel('z [m]')
     pl.title('Mode Num. {0:.0f}, T = {1:.2f} [s]'.format(mode,building['T'][idx[mode-1]]))
@@ -581,7 +582,7 @@ def envresp(building,input,sol,type='acc'):
 def freqresp(building,type=0,f0=0.,f1=10.,nfreq=200.,plottype = 'plot', plotthese = -1, axhan=-1):
 
     omegas,Udum = transfun(building,type,f0,f1,nfreq)
-    U = abs(Udum)
+    U = pl.absolute(Udum)
 
     if plotthese == -1:
         plotthese = arange(building['nfloors'])
@@ -630,7 +631,7 @@ def transfun(building,type=0,f0=0.,f1=10.,nfreq=200.):
     r = matrix(building['rsis'])
 
     omegas = arange(2*pi*f0,2*pi*f1,2*pi*(f1-f0)/nfreq)
-    U = zeros((building['nfloors'],nfreq))
+    U = pl.complex128(zeros((building['nfloors'],nfreq)))
 
     for i in arange(nfreq):
         w = omegas[i]
@@ -737,3 +738,31 @@ def plotinput(input):
 # Funciones de utilidad (nula)
 def shiftplot(w,f):
     pl.plot(np.fft.fftshift(w),np.fft.fftshift(f))
+
+
+def load_building(filename):
+        tree = ET.parse(filename)
+        root = tree.getroot()
+        
+        building = {}
+        building['name'] = root.get("name")
+        
+        building['dx'] = float(root.get("dx"))
+        building['dy'] =  float(root.get("dy"))
+        building['g'] = 9.806				# Gravitational Constant [m/s^2]
+        building['xsi'] = 5. 				# Modal damping  [%]        
+                
+        numfloors = sum(1 for floor in tree.getiterator("floor"))
+        
+        building['h'] = zeros((numfloors,))       # Altura entrepiso [m]
+        building['E'] = zeros((numfloors,))       # Modulo elasticidad piso [tonf/cm**2]
+        building['I'] = zeros((numfloors,))       # Momento inercia columnas [m**4]
+        building['gamma'] = zeros((numfloors,))   # Peso unitario losas [tonf/m**3]
+        building['esp'] = zeros((numfloors,))     # espesor losas [m]
+        
+        for i, floorNode in enumerate(tree.getiterator("floor")):
+            floor = {"h":floorNode.get("h"), "E":floorNode.get("E"), "I":floorNode.get("I"), "gamma":floorNode.get("gamma"), "esp":floorNode.get("esp")}
+            for key,value in floor.iteritems():
+                building[key][i] = float(value) 
+        
+        return building
