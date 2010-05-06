@@ -181,7 +181,7 @@ def plotmode(building,mode=1,anim=0,Nframe = 100,fps = 30.):
     han = plotdef(building,squeeze(array(fac*building['phi'][:,idx[mode-1]])))
     pl.xlabel('Disp [m]')
     pl.ylabel('z [m]')
-    pl.title('Mode Num. {0:.0f}, T = {1:.2f} [s]'.format(mode,building['T'][idx[mode-1]]))
+    pl.title('Mode Num. {0}, T = {1:.2f} [s]'.format(mode,building['T'][idx[mode-1]]))
     pl.axis('equal')
 
     while iter < Nframe:

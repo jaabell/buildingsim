@@ -30,18 +30,42 @@ from definitions import *
 from senales import *
 
 class App(PanedWindow):
+    def unit_change(self, event):
+        self.change_units()
+        
+    def change_units(self):
+        distanceUnit = self.distanceUnitList[self.distanceUnitCombobox.current()]
+        forceUnit = self.forceUnitList[self.forceUnitCombobox.current()]
+        
+        self.labelDx.config(text="Largo [" + distanceUnit + "]")
+        self.labelDy.config(text="Ancho [" + distanceUnit + "]")
+        self.labelH.config(text="Altura [" + distanceUnit + "]")
+        self.labelE.config(text="Modulo Elasticidad [" + forceUnit + "/" + distanceUnit + "^2]")
+        self.labelI.config(text="Momento Inercia [" + distanceUnit + "^4]")
+        self.labelGamma.config(text="Peso Unitario Losa [" + forceUnit + "/" + distanceUnit + "^3]")
+        self.labelEsp.config(text="Espesor [" + distanceUnit + "]")
+        
+    def calculate_g(self, distanceUnit):
+        g = 9.806
+        if distanceUnit == "cm":
+            g = 980.6
+        elif distanceUnit == "mm":
+            g = 9806.
+            
+        return g
+    
     def prepare_action(self):
         self.building = {}
-        self.building['dx'] = float(self.dxEntry.get())     	# [m]
-        self.building['dy'] =  float(self.dyEntry.get())     # [m]
-        self.building['g'] = 9.806				# Gravitational Constant [m/s^2]
+        self.building['dx'] = float(self.dxEntry.get())
+        self.building['dy'] =  float(self.dyEntry.get())
+        self.building['g'] = self.calculate_g(self.distanceUnitList[self.distanceUnitCombobox.current()])
         self.building['xsi'] = 5. 				# Modal damping  [%]
 
-        self.building['h'] = zeros((len(self.buildings),))       # Altura entrepiso [m]
-        self.building['E'] = zeros((len(self.buildings),))       # Modulo elasticidad piso [tonf/cm**2]
-        self.building['I'] = zeros((len(self.buildings),))       # Momento inercia columnas [m**4]
-        self.building['gamma'] = zeros((len(self.buildings),))   # Peso unitario losas [tonf/m**3]
-        self.building['esp'] = zeros((len(self.buildings),))     # espesor losas [m]
+        self.building['h'] = zeros((len(self.buildings),))
+        self.building['E'] = zeros((len(self.buildings),))
+        self.building['I'] = zeros((len(self.buildings),))
+        self.building['gamma'] = zeros((len(self.buildings),))
+        self.building['esp'] = zeros((len(self.buildings),))
 
         for i, item in enumerate(self.buildings):
             for key,value in item.iteritems():
@@ -86,8 +110,10 @@ class App(PanedWindow):
         pl.show()
         
     def plot_plotmode(self):        
+        print self.plotmodeModeCombobox.current()
+        sys.stdout.flush()
         if self.plotmodeModeCombobox.current() >= 0:
-            mode = int(self.plotmodeModeCombobox.get())
+            mode = int(self.plotmodeModeCombobox.get())            
             plotmode(self.building, mode)
             pl.show()
         else:
@@ -99,7 +125,7 @@ class App(PanedWindow):
         else:
             #Load and prepare other building
             otherfilename = self.compareFileEntry.get()                        
-            otherbuilding = self.load_building_to_dictionary(otherfilename)
+            otherbuilding, dUnit, fUnit = self.load_building_to_dictionary(otherfilename)
             otherbuilding = form(otherbuilding)
             
             #Load parameters
@@ -320,62 +346,89 @@ class App(PanedWindow):
         Label(self.frameLeft, text="Edificio ", style="Title.TLabel").grid(row=currentRow, column=0, padx=5, pady=5, sticky=NE)
         self.nameLabel = Label(self.frameLeft, text=self.buildingName, style="Red.TLabel")
         self.nameLabel.grid(row=currentRow, column=1, padx=5, pady=5, sticky=NW)
+        
+        # Unidades
+        currentRow += 1
+        Label(self.frameLeft, text="Unidades", style="Title.TLabel").grid(row=currentRow, column=0, columnspan=3, padx=5, pady=10)
+        currentRow += 1
+        Label(self.frameLeft, text="Al cambiar las unidades los valores NO se cambian automaticamente", style="VerySmall.TLabel").grid(row=currentRow, column=0, columnspan=3, padx=5, pady=10)
+        currentRow += 1
+        Label(self.frameLeft, text="Distancia").grid(row=currentRow, column=0, padx=5, sticky=E)        
+        self.distanceUnitList = ("m", "cm", "mm")
+        self.distanceUnitCombobox = Combobox(self.frameLeft, values=("metros [m]", "centimetros [cm]", "milimetros [mm]"))
+        self.distanceUnitCombobox.grid(row=currentRow, column=1, padx=3, pady=5, sticky=W)
+        self.distanceUnitCombobox.current(newindex=0)
+        self.distanceUnitCombobox.bind('<<ComboboxSelected>>', self.unit_change)
+        currentRow += 1
+        Label(self.frameLeft, text="Fuerza").grid(row=currentRow, column=0, padx=5, sticky=E)        
+        self.forceUnitList = ("tonf", "Kgf", "N", "KN")
+        self.forceUnitCombobox = Combobox(self.frameLeft, values=("toneladas fuerza [tonf]", "kilos fuerza [Kgf]", "Newton [N]", "Kilonewton [KN]"))
+        self.forceUnitCombobox.grid(row=currentRow, column=1, padx=3, pady=5, sticky=W)
+        self.forceUnitCombobox.current(newindex=0)
+        self.forceUnitCombobox.bind('<<ComboboxSelected>>', self.unit_change)
 
         # Base
         currentRow += 1
         Label(self.frameLeft, text="Base", style="Title.TLabel").grid(row=currentRow, column=0, columnspan=3, padx=5, pady=10)
         currentRow += 1
-        Label(self.frameLeft, text="Largo [m]").grid(row=currentRow, column=0, padx=5, sticky=E)
+        self.labelDx = Label(self.frameLeft, text="Largo [m]")
+        self.labelDx.grid(row=currentRow, column=0, padx=5, sticky=E)
         self.dxEntry = Entry(self.frameLeft)
         self.dxEntry.grid(row=currentRow, column=1, padx=3)
         currentRow += 1
-        Label(self.frameLeft, text="Ancho [m]").grid(row=currentRow, column=0, padx=5, sticky=E)
+        self.labelDy = Label(self.frameLeft, text="Ancho [m]")
+        self.labelDy.grid(row=currentRow, column=0, padx=5, sticky=E)
         self.dyEntry = Entry(self.frameLeft)
-        self.dyEntry.grid(row=3, column=1, padx=3)
+        self.dyEntry.grid(row=currentRow, column=1, padx=3)
         
         currentRow += 1
 
         # Pisos
         Label(self.frameLeft, text="Pisos", style="Title.TLabel").grid(row=currentRow, column=0, columnspan=3, padx=5, pady=5)
         currentRow += 1
-        Label(self.frameLeft, text="Altura [m]").grid(row=currentRow, column=0, padx=5, sticky=E)
+        self.labelH = Label(self.frameLeft, text="Altura [m]")
+        self.labelH.grid(row=currentRow, column=0, padx=5, sticky=E)
         self.hEntry = Entry(self.frameLeft)
         self.hEntry.grid(row=currentRow, column=1, padx=5)
         
         currentRow += 1
-        Label(self.frameLeft, text="Modulo Elasticidad [tonf/m^2]").grid(row=currentRow, column=0, padx=5, sticky=E)
+        self.labelE = Label(self.frameLeft, text="Modulo Elasticidad [tonf/m^2]")
+        self.labelE.grid(row=currentRow, column=0, padx=5, sticky=E)
         self.eEntry = Entry(self.frameLeft)
         self.eEntry.grid(row=currentRow, column=1, padx=5)
         
         currentRow += 1
-        Label(self.frameLeft, text="Momento Inercia [m^4]").grid(row=currentRow, column=0, padx=5, sticky=E)
+        self.labelI = Label(self.frameLeft, text="Momento Inercia [m^4]")
+        self.labelI.grid(row=currentRow, column=0, padx=5, sticky=E)
         self.iEntry = Entry(self.frameLeft)
         self.iEntry.grid(row=currentRow, column=1, padx=5)
         
         currentRow += 1
-        Label(self.frameLeft, text="Peso Unitario Losa [tonf/m^3]").grid(row=currentRow, column=0, padx=5, sticky=E)
+        self.labelGamma = Label(self.frameLeft, text="Peso Unitario Losa [tonf/m^3]")
+        self.labelGamma.grid(row=currentRow, column=0, padx=5, sticky=E)
         self.gammaEntry = Entry(self.frameLeft)
         self.gammaEntry.grid(row=currentRow, column=1, padx=5)
         
         currentRow += 1
-        Label(self.frameLeft, text="Espesor [m]").grid(row=currentRow, column=0, padx=5, sticky=E)
+        self.labelEsp = Label(self.frameLeft, text="Espesor [m]")
+        self.labelEsp.grid(row=currentRow, column=0, padx=5, sticky=E)
         self.espEntry = Entry(self.frameLeft)
         self.espEntry.grid(row=currentRow, column=1, padx=5)
                     
         self.addFloorButton = Button(self.frameLeft, text="Agregar >>", command=self.add_floor, width=10)
-        self.addFloorButton.grid(row=6, column=2, rowspan=2, padx=5)
+        self.addFloorButton.grid(row=10, column=2, rowspan=2, padx=5)
 
-        self.editFloorButton = Button(self.frameLeft, text="Cambiar", command=self.change_floor, width=10)
-        self.editFloorButton.grid(row=7, column=2, rowspan=2, padx=5)
+        self.changeFloorButton = Button(self.frameLeft, text="Cambiar >>", command=self.change_floor, width=10)
+        self.changeFloorButton.grid(row=11, column=2, rowspan=2, padx=5)
+        
+        self.editFloorButton = Button(self.frameLeft, text="<< Editar", command=self.edit_floor, width=10)
+        self.editFloorButton.grid(row=12, column=2, rowspan=2, padx=5)
 
         self.floorListBox = Listbox(self.frameLeft, width=40)
-        self.floorListBox.grid(row=6, column=3, rowspan=4, columnspan=2, padx=10)
-
-        self.deleteFloorButton = Button(self.frameLeft, text="Editar", command=self.edit_floor, width=10)
-        self.deleteFloorButton.grid(row=10, column=3, padx=5)
+        self.floorListBox.grid(row=10, column=3, rowspan=4, columnspan=2, padx=10)
 
         self.deleteFloorButton = Button(self.frameLeft, text="Eliminar", command=self.delete_floor, width=10)
-        self.deleteFloorButton.grid(row=10, column=4, padx=5)
+        self.deleteFloorButton.grid(row=14, column=4, padx=5)
 
     def create_actions_frame(self):
         self.actionsTabs = Notebook(self.frameRight)
@@ -616,10 +669,15 @@ class App(PanedWindow):
         
         building = {}
         building['name'] = root.get("name")
-        
         building['dx'] = float(root.get("dx"))
-        building['dy'] =  float(root.get("dy"))
-        building['g'] = 9.806				# Gravitational Constant [m/s^2]
+        building['dy'] =  float(root.get("dy"))        
+        
+        distanceUnit = root.get("du", "m")
+        forceUnit = root.get("fu", "tonf")
+        
+        building['du'] = distanceUnit
+        building['fu'] = forceUnit
+        building['g'] = self.calculate_g(distanceUnit)
         building['xsi'] = 5. 				# Modal damping  [%]        
                 
         numfloors = sum(1 for floor in tree.getiterator("floor"))
@@ -635,14 +693,18 @@ class App(PanedWindow):
             for key,value in floor.iteritems():
                 building[key][i] = float(value) 
         
-        return building
+        return building, distanceUnit, forceUnit
         
     def load_building(self):
         filename = askopenfilename(title="Elige un archivo para abrir", initialdir=".", filetypes=[("BuildingSim File","*.bsim")])
-        building = self.load_building_to_dictionary(filename)
+        building, dUnit, fUnit = self.load_building_to_dictionary(filename)
                 
         self.buildingName = building['name']
         self.prepare_to_building()
+        
+        self.distanceUnitCombobox.current(newindex=self.distanceUnitList.index(dUnit))
+        self.forceUnitCombobox.current(newindex=self.forceUnitList.index(fUnit))
+        self.change_units()
         
         self.nameLabel.config(text=self.buildingName)
         
@@ -664,6 +726,12 @@ class App(PanedWindow):
 
         buildingNode = ET.Element("building")
         buildingNode.set("name", self.buildingName)
+        
+        distanceUnit = self.distanceUnitList[self.distanceUnitCombobox.current()]
+        forceUnit = self.forceUnitList[self.forceUnitCombobox.current()]        
+        buildingNode.set("du", distanceUnit)
+        buildingNode.set("fu", forceUnit)
+        
         buildingNode.set("dx", self.dxEntry.get())
         buildingNode.set("dy", self.dyEntry.get())
 
