@@ -129,7 +129,7 @@ class App(PanedWindow):
             #Load and prepare other building
             otherfilename = self.compareFileEntry.get()                        
             otherbuilding, dUnit, fUnit = self.load_building_to_dictionary(otherfilename)
-            otherbuilding = form(otherbuilding)
+            otherbuilding, isstable = form(otherbuilding)
             
             #Load parameters
             variable = self.compareVariableCombobox.current()
@@ -574,7 +574,7 @@ class App(PanedWindow):
         self.plotmodeFrame = Frame(self.actionsTabs)
         self.actionsTabs.add(self.plotmodeFrame, text="Modos", state="disabled")   
         
-        Label(self.plotmodeFrame, text="Grafico Respuestas en Frecuencia", style="Title.TLabel").grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=N+S+W+E)
+        Label(self.plotmodeFrame, text="Mostrar modos y periodos naturales de vibracion.", style="Title.TLabel").grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=N+S+W+E)
         
         Label(self.plotmodeFrame, text="Modo", style="Small.TLabel").grid(row=1, column=0, padx=5, sticky=E)        
         self.plotmodeModeCombobox = Combobox(self.plotmodeFrame)

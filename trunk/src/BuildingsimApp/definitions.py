@@ -754,16 +754,16 @@ def load_building(filename):
         
         building['dx'] = float(root.get("dx"))
         building['dy'] =  float(root.get("dy"))
-        building['g'] = 9.806				# Gravitational Constant [m/s^2]
+        #building['g'] = 9.806				# Gravitational Constant [m/s^2]
         building['xsi'] = 5. 				# Modal damping  [%]        
                 
         numfloors = sum(1 for floor in tree.getiterator("floor"))
         
-        building['h'] = zeros((numfloors,))       # Altura entrepiso [m]
+        building['h'] = zeros((numfloors,))       # Altura entrepiso ['+building['du']+']
         building['E'] = zeros((numfloors,))       # Modulo elasticidad piso [tonf/cm**2]
         building['I'] = zeros((numfloors,))       # Momento inercia columnas [m**4]
         building['gamma'] = zeros((numfloors,))   # Peso unitario losas [tonf/m**3]
-        building['esp'] = zeros((numfloors,))     # espesor losas [m]
+        building['esp'] = zeros((numfloors,))     # espesor losas ['+building['du']+']
         
         for i, floorNode in enumerate(tree.getiterator("floor")):
             floor = {"h":floorNode.get("h"), "E":floorNode.get("E"), "I":floorNode.get("I"), "gamma":floorNode.get("gamma"), "esp":floorNode.get("esp")}
