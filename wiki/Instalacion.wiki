@@ -1,0 +1,26 @@
+#explicación de los distintos componentes que se deben instalar para utilizar la aplicación
+
+= Contexto =
+
+Esta aplicación está creada con el lenguaje de programación Python. Por ello para ejecutarla es necesario instalar una serie de elementos que permiten a un computador ejecutar programas escritos en el lenguaje mencionado. El programa no se instala, sino que se instalan una serie de componentes que permiten su ejecución.
+
+= Detalles =
+
+Lo primero que deben instalar es python, el cual pueden descargar en: http://www.python.org/download/ Recomendamos trabajar con la versión 2.6.5 que es la más estable en estos momentos.
+
+Luego de instalar python deben instalar una serie de módulos que python utiliza para realizar cosas. A continuación se listan estos módulos, deben descargarlos y seguir sus instrucciones para la instalación.
+  * *SciPy* - http://sourceforge.net/projects/scipy/files/
+  * *numpy* - http://sourceforge.net/projects/numpy/files/
+  * *pylab* - http://sourceforge.net/projects/matplotlib/files/matplotlib/matplotlib-0.99.1/
+  * *ElementTree* - http://effbot.org/downloads/#elementtree
+  * *ttk* - http://pypi.python.org/pypi/pyttk/0.3.2
+
+= Ejecución =
+Una vez instalado todo lo anterior deben realizar lo siguiente:
+  # Bajar el archivo en http://code.google.com/p/buildingsim/downloads/list
+  # Descomprimirlo
+  # Abrir una consola de ejecución (en Windows pueden hacerlo a través de la opción ejecutar del menú inicio, ahí escriben cmd y luego presionan enter)
+  # En la consola muevanse hacia la carpeta donde dejaron la aplicación (lo pueden hacer a través del comando cd, por ejemplo si su aplicación está en C:/Mis Documentos/Matias/BuildingsimApp entonces en la consola escriben {{{cd "C:/Mis Documentos/Matias/BuildingsimApp"}}} y luego presionan enter.
+  # ejecuten la aplicación con python, para eso deben escribir lo siguiente en la consola {{{python buildingsimApp.py}}} y luego presionar enter.
+
+Sabemos que este proceso no es tan sencillo, esperamos poder simplificarlo en el futuro.
